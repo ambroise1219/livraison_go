@@ -1,13 +1,11 @@
 package db
 
 import (
-	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/surrealdb/surrealdb.go"
-	"ilex-backend/config"
+	"github.com/ambroise1219/livraison_go/config"
 )
 
 var DB *surrealdb.DB
@@ -27,15 +25,17 @@ func InitDB(cfg *config.Config) error {
 	}
 
 	// Authenticate
-	if err := db.Signin(map[string]interface{}{
+	_, err = db.Signin(map[string]interface{}{
 		"user": cfg.SurrealDBUsername,
 		"pass": cfg.SurrealDBPassword,
-	}); err != nil {
+	})
+	if err != nil {
 		return fmt.Errorf("failed to authenticate: %v", err)
 	}
 
 	// Use namespace and database
-	if err := db.Use(cfg.SurrealDBNS, cfg.SurrealDBDB); err != nil {
+	_, err = db.Use(cfg.SurrealDBNS, cfg.SurrealDBDB)
+	if err != nil {
 		return fmt.Errorf("failed to use namespace/database: %v", err)
 	}
 
@@ -47,16 +47,13 @@ func InitDB(cfg *config.Config) error {
 // Close database connection
 func CloseDB() error {
 	if DB != nil {
-		return DB.Close()
+		DB.Close()
 	}
 	return nil
 }
 
 // Query executes a SurrealQL query
 func Query(query string, params map[string]interface{}) (interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	if params == nil {
 		params = make(map[string]interface{})
 	}
@@ -71,9 +68,6 @@ func Query(query string, params map[string]interface{}) (interface{}, error) {
 
 // Create creates a new record
 func Create(table string, data interface{}) (interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	result, err := DB.Create(table, data)
 	if err != nil {
 		return nil, fmt.Errorf("create failed: %v", err)
@@ -84,10 +78,12 @@ func Create(table string, data interface{}) (interface{}, error) {
 
 // Select retrieves records by ID or criteria
 func Select(thing interface{}) (interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	thingStr, ok := thing.(string)
+	if !ok {
+		return nil, fmt.Errorf("thing must be a string")
+	}
 
-	result, err := DB.Select(thing)
+	result, err := DB.Select(thingStr)
 	if err != nil {
 		return nil, fmt.Errorf("select failed: %v", err)
 	}
@@ -97,10 +93,12 @@ func Select(thing interface{}) (interface{}, error) {
 
 // Update updates a record
 func Update(thing interface{}, data interface{}) (interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	thingStr, ok := thing.(string)
+	if !ok {
+		return nil, fmt.Errorf("thing must be a string")
+	}
 
-	result, err := DB.Update(thing, data)
+	result, err := DB.Update(thingStr, data)
 	if err != nil {
 		return nil, fmt.Errorf("update failed: %v", err)
 	}
@@ -110,10 +108,12 @@ func Update(thing interface{}, data interface{}) (interface{}, error) {
 
 // Delete deletes a record
 func Delete(thing interface{}) (interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	thingStr, ok := thing.(string)
+	if !ok {
+		return nil, fmt.Errorf("thing must be a string")
+	}
 
-	result, err := DB.Delete(thing)
+	result, err := DB.Delete(thingStr)
 	if err != nil {
 		return nil, fmt.Errorf("delete failed: %v", err)
 	}
@@ -167,8 +167,6 @@ func QueryMultiple(query string, params map[string]interface{}) ([]interface{}, 
 
 // Transaction executes multiple queries in a transaction
 func Transaction(queries []string, params []map[string]interface{}) ([]interface{}, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 
 	var results []interface{}
 

@@ -10,9 +10,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
-	"ilex-backend/config"
-	"ilex-backend/db"
-	"ilex-backend/models"
+	"github.com/ambroise1219/livraison_go/config"
+	"github.com/ambroise1219/livraison_go/db"
+	"github.com/ambroise1219/livraison_go/models"
 )
 
 type AuthService struct {
@@ -189,11 +189,13 @@ func (s *AuthService) ValidateToken(tokenString string) (*models.JWTClaims, erro
 	iat, _ := claims["iat"].(float64)
 
 	return &models.JWTClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Unix(int64(exp), 0)),
+			IssuedAt:  jwt.NewNumericDate(time.Unix(int64(iat), 0)),
+		},
 		UserID: userID,
 		Phone:  phone,
 		Role:   models.UserRole(roleStr),
-		Exp:    int64(exp),
-		Iat:    int64(iat),
 	}, nil
 }
 

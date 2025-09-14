@@ -1,265 +1,272 @@
 package routes
 
 import (
-	"net/http"
+	"time"
 
+	"github.com/ambroise1219/livraison_go/handlers"
+	"github.com/ambroise1219/livraison_go/middlewares"
 	"github.com/gin-gonic/gin"
-
-	"ilex-backend/config"
-	"ilex-backend/handlers"
-	"ilex-backend/services"
 )
 
-// SetupRoutes configures all application routes
-func SetupRoutes(cfg *config.Config) *gin.Engine {
-	// Set Gin mode
-	if cfg.Environment == "production" {
-		gin.SetMode(gin.ReleaseMode)
-	}
+// SetupRoutes configure toutes les routes de l'application
+func SetupRoutes() *gin.Engine {
+	// Créer le routeur Gin
+	router := gin.New()
 
-	// Create Gin engine
-	r := gin.New()
+	// Middlewares globaux
+	router.Use(middlewares.RecoveryMiddleware())
+	router.Use(middlewares.LoggerMiddleware())
+	router.Use(middlewares.CORSMiddleware())
+	router.Use(middlewares.SecurityHeadersMiddleware())
+	
+	// Rate limiting global (100 requêtes par minute)
+	router.Use(middlewares.RateLimitMiddleware(100, time.Minute))
 
-	// Apply global middleware
-	r.Use(LoggerMiddleware())
-	r.Use(RecoveryMiddleware())
-	r.Use(CORSMiddleware())
-	r.Use(RequestIDMiddleware())
-	r.Use(RateLimitMiddleware())
-
-	// Health check endpoint
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"service": "ilex-backend",
-			"version": "1.0.0",
+	// Health check endpoint (pas d'authentification requise)
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":    "ok",
+			"timestamp": time.Now().Unix(),
+			"service":   "ilex-backend",
+			"version":   "1.0.0",
 		})
 	})
 
-	// Initialize services
-	authService := services.NewAuthService(cfg)
-	promoService := services.NewPromoService(cfg)
-	deliveryService := services.NewDeliveryService(cfg, promoService)
+	// API v1
+	v1 := router.Group("/api/v1")
+	
+	// Routes publiques (pas d'authentification requise)
+	setupPublicRoutes(v1)
+	
+	// Routes protégées (authentification requise)
+	setupProtectedRoutes(v1)
 
-	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(authService)
-	deliveryHandler := handlers.NewDeliveryHandler(deliveryService)
-
-	// API v1 routes
-	v1 := r.Group("/api/v1")
-	{
-		// Authentication routes (public)
-		auth := v1.Group("/auth")
-		{
-			auth.POST("/otp/send", authHandler.SendOTP)
-			auth.POST("/login", authHandler.VerifyOTP)
-			auth.POST("/refresh", authHandler.RefreshToken)
-			auth.POST("/logout", authHandler.Logout)
-
-			// Protected auth routes
-			authProtected := auth.Group("")
-			authProtected.Use(AuthMiddleware(authService))
-			{
-				authProtected.GET("/profile", authHandler.GetProfile)
-			}
-		}
-
-		// Protected routes
-		protected := v1.Group("")
-		protected.Use(AuthMiddleware(authService))
-		{
-			// User routes
-			users := protected.Group("/users")
-			{
-				users.GET("/profile", RequireAnyUser(), authHandler.GetProfile)
-				// TODO: Add more user endpoints
-				// users.PUT("/profile", RequireAnyUser(), userHandler.UpdateProfile)
-				// users.POST("/upload-document", RequireDriver(), userHandler.UploadDocument)
-			}
-
-			// Delivery routes
-			deliveries := protected.Group("/deliveries")
-			{
-				deliveries.POST("", RequireClient(), deliveryHandler.CreateDelivery)
-				deliveries.GET("", RequireAnyUser(), deliveryHandler.GetDeliveries)
-				deliveries.GET("/:deliveryId", RequireAnyUser(), deliveryHandler.GetDelivery)
-				deliveries.PUT("/:deliveryId/status", RequireAnyUser(), deliveryHandler.UpdateDeliveryStatus)
-				deliveries.GET("/calculate-price", RequireClient(), deliveryHandler.CalculatePrice)
-				
-				// Admin only routes
-				deliveries.POST("/assign", RequireAdmin(), deliveryHandler.AssignDelivery)
-			}
-
-			// Driver routes
-			drivers := protected.Group("/drivers")
-			drivers.Use(RequireDriver())
-			{
-				// TODO: Add driver-specific endpoints
-				// drivers.PUT("/location", driverHandler.UpdateLocation)
-				// drivers.GET("/deliveries/available", driverHandler.GetAvailableDeliveries)
-				// drivers.POST("/deliveries/:id/accept", driverHandler.AcceptDelivery)
-			}
-
-			// Vehicle routes
-			vehicles := protected.Group("/vehicles")
-			vehicles.Use(RequireDriver())
-			{
-				// TODO: Add vehicle management endpoints
-				// vehicles.POST("", vehicleHandler.CreateVehicle)
-				// vehicles.GET("", vehicleHandler.GetVehicles)
-				// vehicles.PUT("/:id", vehicleHandler.UpdateVehicle)
-			}
-
-			// Promo routes
-			promos := protected.Group("/promos")
-			{
-				// Client routes
-				promos.POST("/validate", RequireClient(), func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Promo validation endpoint - TODO"})
-				})
-				promos.POST("/apply", RequireClient(), func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Apply promo endpoint - TODO"})
-				})
-
-				// Admin routes
-				adminPromos := promos.Group("")
-				adminPromos.Use(RequireAdmin())
-				{
-					adminPromos.POST("", func(c *gin.Context) {
-						c.JSON(http.StatusOK, gin.H{"message": "Create promo endpoint - TODO"})
-					})
-					adminPromos.GET("", func(c *gin.Context) {
-						c.JSON(http.StatusOK, gin.H{"message": "List promos endpoint - TODO"})
-					})
-					adminPromos.PUT("/:id", func(c *gin.Context) {
-						c.JSON(http.StatusOK, gin.H{"message": "Update promo endpoint - TODO"})
-					})
-				}
-			}
-
-			// Referral routes
-			referrals := protected.Group("/referrals")
-			{
-				referrals.POST("", RequireClient(), func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Create referral endpoint - TODO"})
-				})
-				referrals.GET("", RequireClient(), func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Get referrals endpoint - TODO"})
-				})
-				referrals.POST("/:id/claim", RequireClient(), func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Claim referral reward endpoint - TODO"})
-				})
-			}
-
-			// Payment routes
-			payments := protected.Group("/payments")
-			{
-				payments.GET("/methods", RequireAnyUser(), func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Payment methods endpoint - TODO"})
-				})
-				payments.POST("/process", RequireClient(), func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Process payment endpoint - TODO"})
-				})
-			}
-
-			// Wallet routes
-			wallet := protected.Group("/wallet")
-			{
-				wallet.GET("", RequireAnyUser(), func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Get wallet endpoint - TODO"})
-				})
-				wallet.POST("/recharge", RequireClient(), func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Recharge wallet endpoint - TODO"})
-				})
-				wallet.GET("/transactions", RequireAnyUser(), func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Wallet transactions endpoint - TODO"})
-				})
-			}
-
-			// Notification routes
-			notifications := protected.Group("/notifications")
-			notifications.Use(RequireAnyUser())
-			{
-				notifications.GET("", func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Get notifications endpoint - TODO"})
-				})
-				notifications.PUT("/:id/read", func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Mark notification as read endpoint - TODO"})
-				})
-			}
-
-			// Admin routes
-			admin := protected.Group("/admin")
-			admin.Use(RequireAdmin())
-			{
-				// Dashboard
-				admin.GET("/dashboard", func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Admin dashboard endpoint - TODO"})
-				})
-
-				// User management
-				admin.GET("/users", func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Admin users list endpoint - TODO"})
-				})
-				admin.PUT("/users/:id/status", func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Update user status endpoint - TODO"})
-				})
-
-				// Delivery management
-				admin.GET("/deliveries/stats", func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Delivery statistics endpoint - TODO"})
-				})
-
-				// Financial reports
-				admin.GET("/reports/financial", func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Financial reports endpoint - TODO"})
-				})
-
-				// Platform configuration
-				admin.GET("/config", func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Platform config endpoint - TODO"})
-				})
-				admin.PUT("/config", func(c *gin.Context) {
-					c.JSON(http.StatusOK, gin.H{"message": "Update platform config endpoint - TODO"})
-				})
-			}
-		}
-	}
-
-	// WebSocket routes for real-time features
-	r.GET("/ws/delivery/:deliveryId", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "WebSocket delivery tracking endpoint - TODO"})
-	})
-
-	r.GET("/ws/driver/location", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "WebSocket driver location endpoint - TODO"})
-	})
-
-	// File upload routes
-	files := r.Group("/files")
-	{
-		files.POST("/upload", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"message": "File upload endpoint - TODO"})
-		})
-		files.GET("/:fileId", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"message": "File serving endpoint - TODO"})
-		})
-	}
-
-	// 404 handler
-	r.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":   "Not Found",
-			"message": "The requested resource was not found",
-			"path":    c.Request.URL.Path,
-		})
-	})
-
-	return r
+	return router
 }
 
-// StartServer starts the HTTP server
-func StartServer(r *gin.Engine, cfg *config.Config) error {
-	address := cfg.ServerHost + ":" + cfg.ServerPort
-	return r.Run(address)
+// setupPublicRoutes configure les routes publiques
+func setupPublicRoutes(rg *gin.RouterGroup) {
+	// Groupe des routes d'authentification
+	auth := rg.Group("/auth")
+	{
+		// Envoi OTP
+		auth.POST("/otp/send", handlers.SendOTP)
+		
+		// Vérification OTP et connexion
+		auth.POST("/otp/verify", handlers.VerifyOTP)
+		
+		// Rafraîchissement du token
+		auth.POST("/refresh", handlers.RefreshToken)
+	}
+
+	// Routes de livraison publiques (pour calculer prix sans authentification)
+	delivery := rg.Group("/delivery")
+	{
+		// Calcul de prix (optionnel: authentifié pour appliquer promos)
+		delivery.POST("/price/calculate", middlewares.OptionalAuthMiddleware(), handlers.CalculateDeliveryPrice)
+	}
+
+	// Routes de promotion publiques
+	promo := rg.Group("/promo")
+	{
+		// Valider un code promo (optionnel: authentifié pour l'associer à un utilisateur)
+		promo.POST("/validate", middlewares.OptionalAuthMiddleware(), handlers.ValidatePromoCode)
+	}
+}
+
+// setupProtectedRoutes configure les routes protégées
+func setupProtectedRoutes(rg *gin.RouterGroup) {
+	// Appliquer l'authentification à toutes les routes protégées
+	protected := rg.Group("/")
+	protected.Use(middlewares.AuthMiddleware())
+
+	// Routes d'authentification protégées
+	setupAuthRoutes(protected)
+	
+	// Routes utilisateur
+	setupUserRoutes(protected)
+	
+	// Routes de livraison
+	setupDeliveryRoutes(protected)
+	
+	// Routes de promotion
+	setupPromoRoutes(protected)
+	
+	// Routes administrateur
+	setupAdminRoutes(protected)
+}
+
+// setupAuthRoutes configure les routes d'authentification protégées
+func setupAuthRoutes(rg *gin.RouterGroup) {
+	auth := rg.Group("/auth")
+	{
+		// Déconnexion
+		auth.POST("/logout", handlers.Logout)
+		
+		// Profil utilisateur
+		auth.GET("/profile", handlers.GetProfile)
+		auth.PUT("/profile", handlers.UpdateProfile)
+	}
+}
+
+// setupUserRoutes configure les routes utilisateur
+func setupUserRoutes(rg *gin.RouterGroup) {
+	users := rg.Group("/users")
+	{
+		// Profil utilisateur (accessible par l'utilisateur lui-même ou admin)
+		users.GET("/:user_id", middlewares.RequireResourceOwner("user_id"), handlers.GetUserProfile)
+		users.PUT("/:user_id", middlewares.RequireResourceOwner("user_id"), handlers.UpdateUserProfile)
+		
+		// Historique des livraisons de l'utilisateur
+		users.GET("/:user_id/deliveries", middlewares.RequireResourceOwner("user_id"), handlers.GetUserDeliveries)
+		
+		// Véhicules de l'utilisateur (pour les livreurs)
+		users.GET("/:user_id/vehicles", middlewares.RequireResourceOwner("user_id"), middlewares.RequireDriverOrAdmin(), handlers.GetUserVehicles)
+		users.POST("/:user_id/vehicles", middlewares.RequireResourceOwner("user_id"), middlewares.RequireDriver(), handlers.CreateVehicle)
+		users.PUT("/:user_id/vehicles/:vehicle_id", middlewares.RequireResourceOwner("user_id"), middlewares.RequireDriver(), handlers.UpdateVehicle)
+	}
+}
+
+// setupDeliveryRoutes configure les routes de livraison
+func setupDeliveryRoutes(rg *gin.RouterGroup) {
+	delivery := rg.Group("/delivery")
+	{
+		// Création de livraison (clients seulement)
+		delivery.POST("/", middlewares.RequireClientOrAdmin(), handlers.CreateDelivery)
+		
+		// Récupération des détails d'une livraison
+		delivery.GET("/:delivery_id", handlers.GetDelivery) // Validation de propriété dans le handler
+		
+		// Mise à jour du statut (livreurs et admins)
+		delivery.PATCH("/:delivery_id/status", middlewares.RequireDriverOrAdmin(), handlers.UpdateDeliveryStatus)
+		
+		// Assignation de livreur (admins seulement ou auto-assignation pour livreurs disponibles)
+		delivery.POST("/:delivery_id/assign", handlers.AssignDelivery) // Logique de rôle dans le handler
+		
+		// Routes spécifiques aux livreurs
+		driverRoutes := delivery.Group("/driver")
+		driverRoutes.Use(middlewares.RequireDriver())
+		{
+			// Livraisons disponibles pour assignation
+			driverRoutes.GET("/available", handlers.GetAvailableDeliveries)
+			
+			// Livraisons assignées au livreur
+			driverRoutes.GET("/assigned", handlers.GetAssignedDeliveries)
+			
+			// Accepter une livraison
+			driverRoutes.POST("/:delivery_id/accept", handlers.AcceptDelivery)
+			
+			// Mettre à jour la position
+			driverRoutes.POST("/:delivery_id/location", handlers.UpdateDriverLocation)
+		}
+		
+		// Routes spécifiques aux clients
+		clientRoutes := delivery.Group("/client")
+		clientRoutes.Use(middlewares.RequireClientOrAdmin())
+		{
+			// Livraisons du client
+			clientRoutes.GET("/", handlers.GetClientDeliveries)
+			
+			// Annuler une livraison
+			clientRoutes.POST("/:delivery_id/cancel", handlers.CancelDelivery)
+			
+			// Suivre une livraison
+			clientRoutes.GET("/:delivery_id/track", handlers.TrackDelivery)
+		}
+	}
+}
+
+// setupPromoRoutes configure les routes de promotion
+func setupPromoRoutes(rg *gin.RouterGroup) {
+	promo := rg.Group("/promo")
+	{
+		// Utiliser un code promo
+		promo.POST("/use", handlers.UsePromoCode)
+		
+		// Historique des promotions utilisées
+		promo.GET("/history", handlers.GetPromoHistory)
+		
+		// Routes de parrainage
+		referral := promo.Group("/referral")
+		{
+			// Créer un lien de parrainage
+			referral.POST("/create", handlers.CreateReferral)
+			
+			// Obtenir les statistiques de parrainage
+			referral.GET("/stats", handlers.GetReferralStats)
+		}
+	}
+}
+
+// setupAdminRoutes configure les routes administrateur
+func setupAdminRoutes(rg *gin.RouterGroup) {
+	admin := rg.Group("/admin")
+	admin.Use(middlewares.RequireAdmin())
+	{
+		// Gestion des utilisateurs
+		users := admin.Group("/users")
+		{
+			users.GET("/", handlers.GetAllUsers)
+			users.GET("/:user_id", handlers.GetUserDetails)
+			users.PUT("/:user_id/role", handlers.UpdateUserRole)
+			users.DELETE("/:user_id", handlers.DeleteUser)
+		}
+		
+		// Gestion des livraisons
+		deliveries := admin.Group("/deliveries")
+		{
+			deliveries.GET("/", handlers.GetAllDeliveries)
+			deliveries.GET("/stats", handlers.GetDeliveryStats)
+			deliveries.POST("/:delivery_id/assign/:driver_id", handlers.ForceAssignDelivery)
+		}
+		
+		// Gestion des livreurs
+		drivers := admin.Group("/drivers")
+		{
+			drivers.GET("/", handlers.GetAllDrivers)
+			drivers.GET("/:driver_id/stats", handlers.GetDriverStats)
+			drivers.PUT("/:driver_id/status", handlers.UpdateDriverStatus)
+		}
+		
+		// Gestion des promotions
+		promotions := admin.Group("/promotions")
+		{
+			promotions.GET("/", handlers.GetAllPromotions)
+			promotions.POST("/", handlers.CreatePromotion)
+			promotions.PUT("/:promo_id", handlers.UpdatePromotion)
+			promotions.DELETE("/:promo_id", handlers.DeletePromotion)
+			promotions.GET("/:promo_id/stats", handlers.GetPromotionStats)
+		}
+		
+		// Gestion des véhicules
+		vehicles := admin.Group("/vehicles")
+		{
+			vehicles.GET("/", handlers.GetAllVehicles)
+			vehicles.PUT("/:vehicle_id/verify", handlers.VerifyVehicle)
+		}
+		
+		// Statistiques générales
+		stats := admin.Group("/stats")
+		{
+			stats.GET("/dashboard", handlers.GetDashboardStats)
+			stats.GET("/revenue", handlers.GetRevenueStats)
+			stats.GET("/users", handlers.GetUserStats)
+		}
+	}
+}
+
+// Routes WebSocket pour le temps réel (à implémenter plus tard)
+func setupWebSocketRoutes(rg *gin.RouterGroup) {
+	ws := rg.Group("/ws")
+	ws.Use(middlewares.AuthMiddleware())
+	{
+		// Suivi en temps réel des livraisons
+		ws.GET("/delivery/:delivery_id", handlers.DeliveryWebSocket)
+		
+		// Notifications en temps réel pour les livreurs
+		ws.GET("/driver/notifications", middlewares.RequireDriver(), handlers.DriverNotificationsWebSocket)
+		
+		// Notifications en temps réel pour les clients
+		ws.GET("/client/notifications", middlewares.RequireClient(), handlers.ClientNotificationsWebSocket)
+	}
 }

@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 
-	"ilex-backend/models"
-	"ilex-backend/services"
+	"github.com/ambroise1219/livraison_go/models"
+	"github.com/ambroise1219/livraison_go/services"
 )
 
 type AuthHandler struct {

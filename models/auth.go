@@ -2,6 +2,8 @@ package models
 
 import (
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // OTP represents an OTP record
@@ -75,17 +77,12 @@ func (rt *RefreshToken) IsValid() bool {
 
 // JWTClaims represents JWT token claims
 type JWTClaims struct {
+	jwt.RegisteredClaims
 	UserID string   `json:"user_id"`
 	Phone  string   `json:"phone"`
 	Role   UserRole `json:"role"`
-	Exp    int64    `json:"exp"`
-	Iat    int64    `json:"iat"`
 }
 
-// IsExpired checks if JWT token is expired
-func (c *JWTClaims) IsExpired() bool {
-	return time.Now().Unix() > c.Exp
-}
 
 // PasswordResetRequest represents password reset request
 type PasswordResetRequest struct {

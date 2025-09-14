@@ -83,12 +83,6 @@ type DriverLocation struct {
 	VehicleType VehicleType `json:"vehicleType" validate:"required"`
 }
 
-// UpdateDriverLocationRequest represents request for updating driver location
-type UpdateDriverLocationRequest struct {
-	Lat         *float64 `json:"lat,omitempty" validate:"omitempty,gte=-90,lte=90"`
-	Lng         *float64 `json:"lng,omitempty" validate:"omitempty,gte=-180,lte=180"`
-	IsAvailable *bool    `json:"isAvailable,omitempty"`
-}
 
 // HasRequiredDocuments checks if vehicle has all required documents
 func (v *Vehicle) HasRequiredDocuments() bool {

@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 
-	"ilex-backend/models"
-	"ilex-backend/services"
+	"github.com/ambroise1219/livraison_go/models"
+	"github.com/ambroise1219/livraison_go/services"
 )
 
 type DeliveryHandler struct {
@@ -291,7 +291,7 @@ func (h *DeliveryHandler) GetDelivery(c *gin.Context) {
 // @Router /deliveries [get]
 func (h *DeliveryHandler) GetDeliveries(c *gin.Context) {
 	userID := getUserIDFromContext(c)
-	userRole := getUserRoleFromContext(c)
+	// userRole := getUserRoleFromContext(c) // TODO: Use this for filtering
 
 	if userID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{

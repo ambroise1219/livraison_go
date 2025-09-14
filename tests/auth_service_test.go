@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"ilex-backend/config"
-	"ilex-backend/models"
-	"ilex-backend/services"
+	"github.com/ambroise1219/livraison_go/config"
+	"github.com/ambroise1219/livraison_go/models"
+	"github.com/ambroise1219/livraison_go/services"
 )
 
 // MockDB is a mock implementation for database operations

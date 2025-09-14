@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"ilex-backend/models"
-	"ilex-backend/services"
+	"github.com/ambroise1219/livraison_go/models"
+	"github.com/ambroise1219/livraison_go/services"
 )
 
 // AuthMiddleware validates JWT tokens and sets user context
@@ -55,15 +55,16 @@ func AuthMiddleware(authService *services.AuthService) gin.HandlerFunc {
 			return
 		}
 
-		// Check if token is expired
-		if claims.IsExpired() {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "Unauthorized",
-				"message": "Token has expired",
-			})
-			c.Abort()
-			return
-		}
+		// Check if token is expired (handled automatically by JWT library in token.Valid)
+		// Additional check if needed:
+		// if claims.ExpiresAt != nil && claims.ExpiresAt.Before(time.Now()) {
+		//     c.JSON(http.StatusUnauthorized, gin.H{
+		//         "error":   "Unauthorized",
+		//         "message": "Token has expired",
+		//     })
+		//     c.Abort()
+		//     return
+		// }
 
 		// Set user context
 		c.Set("userID", claims.UserID)

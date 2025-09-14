@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"ilex-backend/config"
-	"ilex-backend/db"
-	"ilex-backend/models"
+	"github.com/ambroise1219/livraison_go/config"
+	"github.com/ambroise1219/livraison_go/db"
+	"github.com/ambroise1219/livraison_go/models"
 )
 
 type PromoService struct {

@@ -3,79 +3,103 @@ package main
 import (
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 
-	"ilex-backend/config"
-	"ilex-backend/db"
-	"ilex-backend/routes"
+	"github.com/ambroise1219/livraison_go/config"
+	"github.com/ambroise1219/livraison_go/db"
+	"github.com/ambroise1219/livraison_go/routes"
+	"github.com/gin-gonic/gin"
 )
 
-// @title ILEX Backend API
-// @version 1.0
-// @description Backend API for ILEX delivery platform with SurrealDB
-// @termsOfService http://swagger.io/terms/
-
-// @contact.name ILEX Support
-// @contact.email support@ilex.com
-
-// @license.name MIT
-// @license.url https://opensource.org/licenses/MIT
-
-// @host localhost:8080
-// @BasePath /api/v1
-
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
-
 func main() {
-	// Load configuration
-	cfg := config.LoadConfig()
-	log.Printf("Starting ILEX Backend Server in %s mode", cfg.Environment)
-
-	// Initialize database connection
-	if err := db.InitDB(cfg); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+	// Charger la configuration
+	cfg := config.GetConfig()
+	
+	// Définir le mode Gin selon l'environnement
+	if cfg.Environment == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	} else if cfg.Environment == "development" {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.TestMode)
 	}
-	defer func() {
-		if err := db.CloseDB(); err != nil {
-			log.Printf("Error closing database: %v", err)
-		}
-	}()
 
-	// Setup routes
-	router := routes.SetupRoutes(cfg)
+	// Initialiser la connexion à la base de données
+	log.Println("🔗 Connexion à SurrealDB...")
+	if err := db.InitDB(cfg); err != nil {
+		log.Fatalf("❌ Erreur lors de l'initialisation de SurrealDB: %v", err)
+	}
+	log.Println("✅ Connexion à SurrealDB établie avec succès")
 
-	// Setup graceful shutdown
-	setupGracefulShutdown()
-
-	// Start server
-	log.Printf("Server starting on %s:%s", cfg.ServerHost, cfg.ServerPort)
-	log.Printf("Health check available at http://%s:%s/health", cfg.ServerHost, cfg.ServerPort)
-	log.Printf("API documentation available at http://%s:%s/swagger/index.html", cfg.ServerHost, cfg.ServerPort)
-
-	if err := routes.StartServer(router, cfg); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+	// Configurer les routes
+	log.Println("🚀 Configuration des routes...")
+	router := routes.SetupRoutes()
+	
+	// Afficher les informations de démarrage
+	log.Printf("🌟 Serveur ILEX Backend démarré:")
+	log.Printf("   🏠 Environnement: %s", cfg.Environment)
+	log.Printf("   🌐 Adresse: %s:%s", cfg.ServerHost, cfg.ServerPort)
+	log.Printf("   📊 SurrealDB: %s", cfg.SurrealDBURL)
+	log.Printf("   📈 Health Check: http://%s:%s/health", cfg.ServerHost, cfg.ServerPort)
+	log.Printf("   📚 API Documentation: http://%s:%s/api/v1", cfg.ServerHost, cfg.ServerPort)
+	
+	// Démarrer le serveur
+	address := cfg.ServerHost + ":" + cfg.ServerPort
+	log.Printf("🚀 Serveur en écoute sur %s", address)
+	
+	if err := router.Run(address); err != nil {
+		log.Fatalf("❌ Erreur lors du démarrage du serveur: %v", err)
 	}
 }
 
-// setupGracefulShutdown sets up graceful shutdown handling
-func setupGracefulShutdown() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		<-c
-		log.Println("Gracefully shutting down...")
-		
-		// Close database connection
-		if err := db.CloseDB(); err != nil {
-			log.Printf("Error closing database during shutdown: %v", err)
-		}
-
-		log.Println("Server shutdown complete")
-		os.Exit(0)
-	}()
+// init initialise les variables d'environnement par défaut si elles ne sont pas définies
+func init() {
+	// Définir des valeurs par défaut pour le développement local
+	if os.Getenv("SERVER_HOST") == "" {
+		os.Setenv("SERVER_HOST", "localhost")
+	}
+	if os.Getenv("SERVER_PORT") == "" {
+		os.Setenv("SERVER_PORT", "8080")
+	}
+	if os.Getenv("ENVIRONMENT") == "" {
+		os.Setenv("ENVIRONMENT", "development")
+	}
+	if os.Getenv("SURREALDB_URL") == "" {
+		os.Setenv("SURREALDB_URL", "ws://localhost:8000")
+	}
+	if os.Getenv("SURREALDB_NAMESPACE") == "" {
+		os.Setenv("SURREALDB_NAMESPACE", "ilex")
+	}
+	if os.Getenv("SURREALDB_DATABASE") == "" {
+		os.Setenv("SURREALDB_DATABASE", "livraison")
+	}
+	if os.Getenv("JWT_SECRET") == "" {
+		os.Setenv("JWT_SECRET", "dev-jwt-secret-key-change-in-production")
+	}
+	if os.Getenv("JWT_EXPIRY_HOURS") == "" {
+		os.Setenv("JWT_EXPIRY_HOURS", "24")
+	}
+	if os.Getenv("JWT_REFRESH_EXPIRY_DAYS") == "" {
+		os.Setenv("JWT_REFRESH_EXPIRY_DAYS", "7")
+	}
+	if os.Getenv("OTP_EXPIRY_MINUTES") == "" {
+		os.Setenv("OTP_EXPIRY_MINUTES", "5")
+	}
+	if os.Getenv("SMS_API_KEY") == "" {
+		os.Setenv("SMS_API_KEY", "dev-sms-api-key")
+	}
+	if os.Getenv("SMS_SENDER") == "" {
+		os.Setenv("SMS_SENDER", "ILEX")
+	}
+	if os.Getenv("EMAIL_HOST") == "" {
+		os.Setenv("EMAIL_HOST", "smtp.gmail.com")
+	}
+	if os.Getenv("EMAIL_PORT") == "" {
+		os.Setenv("EMAIL_PORT", "587")
+	}
+	if os.Getenv("EMAIL_USERNAME") == "" {
+		os.Setenv("EMAIL_USERNAME", "dev@ilex.com")
+	}
+	if os.Getenv("EMAIL_PASSWORD") == "" {
+		os.Setenv("EMAIL_PASSWORD", "dev-email-password")
+	}
 }

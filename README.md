@@ -1,233 +1,294 @@
-# ILEX Backend - Go + SurrealDB
+# ILEX Backend Go
 
-Backend API for ILEX delivery platform built with Go and SurrealDB, featuring complex business logic for delivery management, user authentication, and promotional systems.
+Backend de l'application ILEX de livraison développé en Go avec SurrealDB.
 
-## 🏗️ Architecture
+## 🚀 Fonctionnalités
 
-This backend focuses on **complex business logic** while leveraging SurrealDB's native CRUD and real-time capabilities:
+- 🔐 Authentification JWT avec OTP par SMS
+- 👥 Gestion des rôles (CLIENT, LIVREUR, ADMIN)
+- 📦 Gestion des livraisons avec suivi en temps réel
+- 🚗 Gestion des véhicules pour livreurs
+- 💰 Système de promotions et parrainage
+- 📊 Tableaux de bord administrateurs
+- 🔒 API REST sécurisée avec middlewares
+- 🎯 Architecture propre et modulaire
 
-- ✅ **Complex Business Logic**: Delivery assignment, price calculation, role-based validation
-- ✅ **Smart Delivery Assignment**: Automatic driver assignment based on location and vehicle compatibility
-- ✅ **Dynamic Pricing**: Multi-factor price calculation (distance, vehicle type, delivery type, promos)
-- ✅ **OTP Authentication**: Secure phone-based authentication with JWT tokens
-- ✅ **Role-Based Access**: CLIENT, LIVREUR (Driver), ADMIN, GESTIONNAIRE, MARKETING
-- ✅ **Promotional System**: Discount codes, referral system with validation
-- ✅ **Real-time Ready**: WebSocket endpoints for delivery tracking
+## 📋 Prérequis
 
-## 🚀 Quick Start
+- **Go 1.19+** - [Télécharger Go](https://golang.org/dl/)
+- **SurrealDB** - [Installation SurrealDB](https://surrealdb.com/docs/installation)
+- **Git** - Pour cloner le projet
 
-### Prerequisites
+## 🛠️ Installation
 
-- [Go 1.21+](https://golang.org/dl/)
-- [SurrealDB](https://surrealdb.com/) running on your server
-
-### Installation
-
-1. **Clone the repository**
+### 1. Cloner le projet
 ```bash
-git clone <your-repo>
-cd ilex-backend
+git clone https://github.com/ambroise1219/livraison_go.git
+cd livraison_go
 ```
 
-2. **Install dependencies**
+### 2. Installer Go (si nécessaire)
+
+#### Windows (avec Chocolatey)
+```powershell
+# En tant qu'administrateur
+choco install golang -y
+```
+
+#### Windows (manuel)
+1. Télécharger depuis https://golang.org/dl/
+2. Exécuter l'installateur
+3. Redémarrer le terminal
+
+#### Linux/macOS
 ```bash
+# Via le gestionnaire de paquets ou depuis golang.org
+# Ubuntu/Debian
+sudo apt install golang-go
+
+# macOS (avec Homebrew)
+brew install go
+```
+
+### 3. Vérifier l'installation de Go
+```bash
+go version
+# Devrait afficher: go version go1.x.x
+```
+
+### 4. Installer les dépendances
+```bash
+go mod download
 go mod tidy
 ```
 
-3. **Configure environment**
-```bash
-# Copy environment template
-cp .env.example .env
+### 5. Installer et démarrer SurrealDB
 
-# Edit .env with your actual values
-# IMPORTANT: Never commit .env to version control
+#### Avec Docker (recommandé)
+```bash
+docker run --name surrealdb -d -p 8000:8000 surrealdb/surrealdb:latest start --log trace --user root --pass root memory
 ```
 
-4. **Set up your .env file**
+#### Installation manuelle
+```bash
+# Voir https://surrealdb.com/docs/installation
+```
+
+## ⚙️ Configuration
+
+### Variables d'environnement
+
+Créer un fichier `.env` à la racine du projet :
+
 ```env
-# SurrealDB Configuration
-SURREALDB_URL=ws://your-surrealdb-host:8000/rpc
+# Serveur
+SERVER_HOST=localhost
+SERVER_PORT=8080
+ENVIRONMENT=development
+
+# SurrealDB
+SURREALDB_URL=ws://localhost:8000
+SURREALDB_NAMESPACE=ilex
+SURREALDB_DATABASE=livraison
 SURREALDB_USERNAME=root
-SURREALDB_PASSWORD=your-password
-SURREALDB_NS=ilex
-SURREALDB_DB=production
+SURREALDB_PASSWORD=root
 
-# JWT Secret (use a strong 32+ character string)
-JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+# JWT
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+JWT_EXPIRY_HOURS=24
+JWT_REFRESH_EXPIRY_DAYS=7
 
-# SMS API for OTP (optional for development)
+# OTP
+OTP_EXPIRY_MINUTES=5
+
+# SMS (remplacer par vos vraies clés)
 SMS_API_KEY=your-sms-api-key
-SMS_API_SECRET=your-sms-secret
+SMS_API_URL=https://api.sms-provider.com/send
+SMS_SENDER=ILEX
+
+# Email (remplacer par vos vrais paramètres)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USERNAME=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
 ```
 
-5. **Run the server**
+### Configuration par défaut
+
+Si aucun fichier `.env` n'est fourni, les valeurs par défaut de développement sont utilisées (voir `main.go`).
+
+## 🚀 Démarrage
+
+### 1. Démarrer SurrealDB
 ```bash
+# Si utilisant Docker
+docker start surrealdb
+
+# Si installation manuelle
+surreal start --log trace --user root --pass root memory
+```
+
+### 2. Lancer le backend
+```bash
+# Développement
 go run main.go
+
+# Ou compiler puis exécuter
+go build -o ilex-backend
+./ilex-backend
 ```
 
-The server will start on `http://localhost:8080`
+Le serveur démarrera sur `http://localhost:8080`
 
-## 📡 API Endpoints
+## 📚 API Endpoints
 
-### Health Check
-```http
-GET /health
+### 🔐 Authentification
+```
+POST /api/v1/auth/otp/send      - Envoyer OTP
+POST /api/v1/auth/otp/verify    - Vérifier OTP et se connecter
+POST /api/v1/auth/refresh       - Rafraîchir le token
+POST /api/v1/auth/logout        - Se déconnecter
+GET  /api/v1/auth/profile       - Profil utilisateur
 ```
 
-### Authentication
-```http
-POST /api/v1/auth/otp/send     # Send OTP to phone
-POST /api/v1/auth/login        # Verify OTP & login
-POST /api/v1/auth/refresh      # Refresh JWT token
-POST /api/v1/auth/logout       # Logout (revoke refresh token)
-GET  /api/v1/auth/profile      # Get user profile
+### 📦 Livraisons
+```
+POST /api/v1/delivery/                    - Créer livraison (CLIENT)
+GET  /api/v1/delivery/:id                 - Détails livraison
+POST /api/v1/delivery/price/calculate     - Calculer prix (public)
+PATCH /api/v1/delivery/:id/status         - Mettre à jour statut (LIVREUR/ADMIN)
 ```
 
-### Deliveries
-```http
-POST /api/v1/deliveries                    # Create delivery (CLIENT only)
-GET  /api/v1/deliveries                    # List deliveries
-GET  /api/v1/deliveries/{id}               # Get delivery details
-PUT  /api/v1/deliveries/{id}/status        # Update delivery status
-GET  /api/v1/deliveries/calculate-price    # Calculate delivery price
-POST /api/v1/deliveries/assign             # Assign delivery (ADMIN only)
+### 🚚 Livreurs
+```
+GET  /api/v1/delivery/driver/available    - Livraisons disponibles
+GET  /api/v1/delivery/driver/assigned     - Livraisons assignées
+POST /api/v1/delivery/driver/:id/accept   - Accepter livraison
+POST /api/v1/delivery/driver/:id/location - Mettre à jour position
 ```
 
-### Admin Panel
-```http
-GET /api/v1/admin/dashboard        # Admin dashboard
-GET /api/v1/admin/users           # User management
-GET /api/v1/admin/deliveries/stats # Delivery statistics
+### 👥 Utilisateurs
+```
+GET  /api/v1/users/:id                    - Profil utilisateur
+PUT  /api/v1/users/:id                    - Mettre à jour profil
+GET  /api/v1/users/:id/deliveries         - Historique livraisons
 ```
 
-## 🔐 Authentication Flow
+### 🎁 Promotions
+```
+POST /api/v1/promo/validate               - Valider code promo
+POST /api/v1/promo/use                    - Utiliser code promo
+GET  /api/v1/promo/history                - Historique promos
+```
 
-1. **Send OTP**: `POST /auth/otp/send` with phone number
-2. **Verify OTP**: `POST /auth/login` with phone + OTP code
-3. **Get JWT Token**: Use token for subsequent API calls
-4. **Authorization Header**: `Bearer your-jwt-token`
+### 👑 Administration (ADMIN uniquement)
+```
+GET  /api/v1/admin/users                  - Liste utilisateurs
+GET  /api/v1/admin/deliveries             - Liste livraisons
+GET  /api/v1/admin/drivers                - Liste livreurs
+GET  /api/v1/admin/stats/dashboard        - Statistiques dashboard
+```
 
-### Example Authentication
+## 🧪 Tests
+
 ```bash
-# 1. Send OTP
-curl -X POST http://localhost:8080/api/v1/auth/otp/send \
-  -H "Content-Type: application/json" \
-  -d '{"phone":"+221771234567"}'
-
-# 2. Login with OTP
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"phone":"+221771234567","code":"123456"}'
-
-# 3. Use JWT token
-curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  http://localhost:8080/api/v1/auth/profile
-```
-
-## 🏪 Business Logic Examples
-
-### Smart Delivery Assignment
-The system automatically assigns deliveries to the best available driver based on:
-- Driver location (closest first using Haversine distance)
-- Vehicle compatibility with delivery type
-- Driver status (ONLINE/AVAILABLE)
-- Driver profile completion (documents, vehicle setup)
-
-### Dynamic Price Calculation
-Prices are calculated considering:
-- **Base price** by vehicle type (MOTO: 1000 FCFA, VOITURE: 2000 FCFA, CAMIONNETTE: 5000 FCFA)
-- **Distance surcharge** after included kilometers
-- **Delivery type multipliers** (EXPRESS: +50%, GROUPEE: -30%, DEMENAGEMENT: +100%)
-- **Waiting time charges** after free minutes
-- **Promotional discounts** (percentage, fixed amount, or free delivery)
-
-### Role-Based Permissions
-- **CLIENT**: Create deliveries, view own deliveries, apply promos
-- **LIVREUR**: Accept deliveries, update status, view assigned deliveries
-- **ADMIN/GESTIONNAIRE**: Full access, user management, delivery assignment
-- **MARKETING**: Promo management, referral system
-
-## 🗂️ Project Structure
-
-```
-ilex-backend/
-├── config/           # Environment configuration
-├── db/               # SurrealDB connection & helpers
-├── models/           # Data models matching SurrealDB schema
-│   ├── user.go       # User, roles, driver status
-│   ├── auth.go       # OTP, JWT, refresh tokens
-│   ├── delivery.go   # Delivery, package, location
-│   ├── vehicle.go    # Vehicle, driver location
-│   └── promo.go      # Promotions, referrals, pricing
-├── services/         # Business logic layer
-│   ├── auth_service.go     # OTP, JWT management
-│   ├── delivery_service.go # Assignment, pricing
-│   └── promo_service.go    # Promotions, referrals
-├── handlers/         # HTTP request handlers
-├── routes/           # Route configuration & middleware
-├── tests/            # Unit & integration tests
-└── main.go           # Application entry point
-```
-
-## 🔧 Development
-
-### Running Tests
-```bash
-# Run all tests
+# Lancer les tests
 go test ./...
 
-# Run tests with coverage
+# Tests avec couverture
 go test -cover ./...
 
-# Run only unit tests (skip integration)
-go test -short ./...
+# Tests détaillés
+go test -v ./...
 ```
 
-### Environment Variables
-All sensitive configuration is handled through environment variables. Never commit actual credentials to version control.
+## 🏗️ Architecture
 
-Key variables:
-- `SURREALDB_URL`: Your SurrealDB connection URL
-- `JWT_SECRET`: Secure random string for JWT signing
-- `SMS_API_KEY`: SMS provider credentials for OTP
-- `SMTP_*`: Email configuration for notifications
+```
+├── cmd/                 # Points d'entrée
+├── config/             # Configuration
+├── db/                 # Connexion base de données
+├── handlers/           # Contrôleurs HTTP
+├── middlewares/        # Middlewares (auth, CORS, etc.)
+├── models/             # Modèles de données
+├── routes/             # Définition des routes
+├── services/           # Logique métier
+├── tests/              # Tests
+└── main.go            # Point d'entrée principal
+```
 
-## 📦 SurrealDB Schema
+## 🔧 Développement
 
-The backend works with a comprehensive SurrealDB schema including:
-- **Users** with role management and driver profiles
-- **Deliveries** with status tracking and special types (grouped, moving)
-- **Vehicles** with document management
-- **Promotions** and referral system
-- **Payments** and wallet management
-- **Real-time tracking** and notifications
+### Ajouter un nouveau endpoint
 
-## 🔒 Security Features
+1. **Définir le modèle** dans `models/`
+2. **Créer le service** dans `services/`
+3. **Ajouter le handler** dans `handlers/`
+4. **Configurer la route** dans `routes/routes.go`
+5. **Écrire les tests** dans `tests/`
 
-- **JWT Authentication** with refresh tokens
-- **Role-based access control** on all endpoints
-- **OTP verification** for phone-based authentication
-- **Input validation** on all API endpoints
-- **Secure environment** configuration
-- **CORS protection** and request rate limiting
+### Middlewares disponibles
 
-## 🚦 Production Deployment
+- `AuthMiddleware()` - Authentification JWT requise
+- `RequireRole(roles...)` - Vérification de rôles
+- `RequireAdmin()` - Admin uniquement
+- `RequireDriver()` - Livreur uniquement
+- `RequireClient()` - Client uniquement
+- `CORSMiddleware()` - Gestion CORS
+- `RateLimitMiddleware()` - Limitation de débit
 
-Before deploying:
-1. Set `ENVIRONMENT=production`
-2. Use strong JWT secrets (32+ characters)
-3. Configure SMS/Email providers
-4. Set up proper logging and monitoring
-5. Use HTTPS in production
-6. Configure firewall rules for SurrealDB
+## 📊 Monitoring
 
-## 🤝 Contributing
+### Health Check
+```bash
+curl http://localhost:8080/health
+```
 
-1. Follow Go best practices
-2. Add tests for new features
-3. Update documentation
-4. Never commit sensitive data
+### Logs
+Les logs sont affichés dans la console avec codes couleur selon le niveau.
 
-## 📄 License
+## 🔒 Sécurité
 
-[Your License Here]
+- Tokens JWT avec expiration
+- Middleware de validation des rôles
+- Rate limiting par IP
+- Headers de sécurité (XSS, CSRF, etc.)
+- Validation des données d'entrée
+- Hashage sécurisé des mots de passe
+
+## 🚀 Déploiement
+
+### Production
+
+1. Définir `ENVIRONMENT=production`
+2. Configurer les vraies variables d'environnement
+3. Utiliser HTTPS
+4. Configurer un reverse proxy (nginx)
+5. Mettre en place la supervision
+
+### Docker (à venir)
+```bash
+docker build -t ilex-backend .
+docker run -p 8080:8080 ilex-backend
+```
+
+## 🤝 Contribution
+
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit les changes (`git commit -m 'Add some AmazingFeature'`)
+4. Créer une Pull Request
+
+## 📝 License
+
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+## 📞 Support
+
+- 📧 Email: support@ilex.com
+- 📱 GitHub Issues: [Issues](https://github.com/ambroise1219/livraison_go/issues)
+- 💬 Discord: [Lien Discord]
+
+---
+
+**Développé avec ❤️ par l'équipe ILEX**

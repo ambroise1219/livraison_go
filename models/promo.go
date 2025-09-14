@@ -185,8 +185,8 @@ func (p *Promo) IsExpired() bool {
 	return time.Now().After(p.EndDate)
 }
 
-// IsActive checks if promo is active and not expired
-func (p *Promo) IsActive() bool {
+// IsCurrentlyActive checks if promo is active and not expired
+func (p *Promo) IsCurrentlyActive() bool {
 	now := time.Now()
 	return p.IsActive && now.After(p.StartDate) && now.Before(p.EndDate)
 }
@@ -204,7 +204,7 @@ func (p *Promo) HasReachedMaxUsage() bool {
 
 // CanBeUsed checks if promo can be used for given amount
 func (p *Promo) CanBeUsed(amount float64) bool {
-	if !p.IsActive() || p.HasReachedMaxUsage() {
+	if !p.IsCurrentlyActive() || p.HasReachedMaxUsage() {
 		return false
 	}
 	

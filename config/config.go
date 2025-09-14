@@ -106,6 +106,14 @@ func LoadConfig() *Config {
 	return config
 }
 
+// GetConfig returns the loaded configuration or loads it if not loaded
+func GetConfig() *Config {
+	if AppConfig == nil {
+		return LoadConfig()
+	}
+	return AppConfig
+}
+
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
