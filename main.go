@@ -6,6 +6,7 @@ import (
 
 	"github.com/ambroise1219/livraison_go/config"
 	"github.com/ambroise1219/livraison_go/db"
+	"github.com/ambroise1219/livraison_go/handlers"
 	"github.com/ambroise1219/livraison_go/routes"
 	"github.com/gin-gonic/gin"
 )
@@ -29,6 +30,11 @@ func main() {
 		log.Fatalf("❌ Erreur lors de l'initialisation de SurrealDB: %v", err)
 	}
 	log.Println("✅ Connexion à SurrealDB établie avec succès")
+
+	// Initialiser les handlers
+	log.Println("🔧 Initialisation des handlers...")
+	handlers.InitHandlers()
+	log.Println("✅ Handlers initialisés avec succès")
 
 	// Configurer les routes
 	log.Println("🚀 Configuration des routes...")
@@ -64,13 +70,19 @@ func init() {
 		os.Setenv("ENVIRONMENT", "development")
 	}
 	if os.Getenv("SURREALDB_URL") == "" {
-		os.Setenv("SURREALDB_URL", "ws://localhost:8000")
+		os.Setenv("SURREALDB_URL", "ws://172.187.248.156:8000/rpc")
 	}
-	if os.Getenv("SURREALDB_NAMESPACE") == "" {
-		os.Setenv("SURREALDB_NAMESPACE", "ilex")
+	if os.Getenv("SURREALDB_USERNAME") == "" {
+		os.Setenv("SURREALDB_USERNAME", "root")
 	}
-	if os.Getenv("SURREALDB_DATABASE") == "" {
-		os.Setenv("SURREALDB_DATABASE", "livraison")
+	if os.Getenv("SURREALDB_PASSWORD") == "" {
+		os.Setenv("SURREALDB_PASSWORD", "root")
+	}
+	if os.Getenv("SURREALDB_NS") == "" {
+		os.Setenv("SURREALDB_NS", "ilex")
+	}
+	if os.Getenv("SURREALDB_DB") == "" {
+		os.Setenv("SURREALDB_DB", "production")
 	}
 	if os.Getenv("JWT_SECRET") == "" {
 		os.Setenv("JWT_SECRET", "dev-jwt-secret-key-change-in-production")

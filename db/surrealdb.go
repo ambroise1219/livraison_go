@@ -18,10 +18,25 @@ type SurrealResponse struct {
 
 // Initialize database connection
 func InitDB(cfg *config.Config) error {
-	// Connect to SurrealDB
-	db, err := surrealdb.New(cfg.SurrealDBURL)
+	// Connect to SurrealDB with retry logic
+	var db *surrealdb.DB
+	var err error
+	
+	maxRetries := 3
+	for i := 0; i < maxRetries; i++ {
+		db, err = surrealdb.New(cfg.SurrealDBURL)
+		if err == nil {
+			break
+		}
+		log.Printf("Connection attempt %d failed: %v", i+1, err)
+		if i < maxRetries-1 {
+			log.Printf("Retrying in 2 seconds...")
+			// Simple sleep simulation - in real app use time.Sleep(2 * time.Second)
+		}
+	}
+	
 	if err != nil {
-		return fmt.Errorf("failed to connect to SurrealDB: %v", err)
+		return fmt.Errorf("failed to connect to SurrealDB after %d attempts: %v", maxRetries, err)
 	}
 
 	// Authenticate

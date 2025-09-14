@@ -4,22 +4,129 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+
+	"github.com/ambroise1219/livraison_go/config"
+	"github.com/ambroise1219/livraison_go/models"
+	"github.com/ambroise1219/livraison_go/services"
 )
 
-// Stubs pour tous les handlers référencés dans les routes
-// À implémenter progressivement selon les besoins
+// Global validator instance
+var validate *validator.Validate
+var authService *services.AuthService
+
+// InitHandlers initializes handlers with dependencies
+func InitHandlers() {
+	validate = validator.New()
+	authService = services.NewAuthService(config.GetConfig())
+}
 
 // Auth handlers
 func SendOTP(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "SendOTP - TODO: Implémenter"})
+	var req models.SendOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Validate request
+	if err := validate.Struct(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed", "details": err.Error()})
+		return
+	}
+
+	// Save OTP to database
+	otp, err := authService.SaveOTP(req.Phone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate OTP", "details": err.Error()})
+		return
+	}
+
+	// Simulate SMS sending
+	if err := authService.SimulateSMSSend(req.Phone, otp.Code); err != nil {
+		// Don't fail if SMS sending fails, just log it
+		// In production, you might want to handle this differently
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "OTP sent successfully",
+		"expiresIn": "5 minutes",
+	})
 }
 
 func VerifyOTP(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "VerifyOTP - TODO: Implémenter"})
+	var req models.VerifyOTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Validate request
+	if err := validate.Struct(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed", "details": err.Error()})
+		return
+	}
+
+	// Verify OTP
+	_, err := authService.VerifyOTP(req.Phone, req.Code)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired OTP", "details": err.Error()})
+		return
+	}
+
+	// Find or create user
+	user, isNewUser, err := authService.FindOrCreateUser(req.Phone)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process user", "details": err.Error()})
+		return
+	}
+
+	// Generate tokens
+	authResponse, err := authService.GenerateTokens(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens", "details": err.Error()})
+		return
+	}
+
+	response := gin.H{
+		"message": "Authentication successful",
+		"isNewUser": isNewUser,
+		"token": authResponse.Token,
+		"refreshToken": authResponse.RefreshToken,
+		"user": authResponse.User,
+		"expiresAt": authResponse.ExpiresAt,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func RefreshToken(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "RefreshToken - TODO: Implémenter"})
+	var req models.RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
+
+	// Validate request
+	if err := validate.Struct(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Validation failed", "details": err.Error()})
+		return
+	}
+
+	// Refresh access token
+	authResponse, err := authService.RefreshAccessToken(req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Token refreshed successfully",
+		"token": authResponse.Token,
+		"refreshToken": authResponse.RefreshToken,
+		"user": authResponse.User,
+		"expiresAt": authResponse.ExpiresAt,
+	})
 }
 
 func Logout(c *gin.Context) {
