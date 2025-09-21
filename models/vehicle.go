@@ -124,12 +124,12 @@ func (v *Vehicle) CanBeUsedForDelivery() bool {
 // IsCompatibleWithDeliveryType checks if vehicle type is compatible with delivery type
 func (v *Vehicle) IsCompatibleWithDeliveryType(deliveryType DeliveryType) bool {
 	switch deliveryType {
-	case DeliveryTypeSimple, DeliveryTypeExpress:
-		return true // All vehicle types can handle simple and express
-	case DeliveryTypeGroupee:
-		return v.Type == VehicleTypeVoiture || v.Type == VehicleTypeCamionnette
+	case DeliveryTypeStandard, DeliveryTypeExpress:
+		return true // All vehicle types can handle standard and express
+	case DeliveryTypeGrouped:
+		return v.Type == VehicleTypeCar || v.Type == VehicleTypeVan
 	case DeliveryTypeDemenagement:
-		return v.Type == VehicleTypeCamionnette
+		return v.Type == VehicleTypeVan
 	default:
 		return false
 	}
@@ -138,11 +138,11 @@ func (v *Vehicle) IsCompatibleWithDeliveryType(deliveryType DeliveryType) bool {
 // GetCapacityWeight returns vehicle capacity in kg
 func (v *Vehicle) GetCapacityWeight() float64 {
 	switch v.Type {
-	case VehicleTypeMoto:
+	case VehicleTypeMotorcycle:
 		return 50.0 // 50 kg max
-	case VehicleTypeVoiture:
+	case VehicleTypeCar:
 		return 200.0 // 200 kg max
-	case VehicleTypeCamionnette:
+	case VehicleTypeVan:
 		return 1000.0 // 1000 kg max
 	default:
 		return 50.0
@@ -152,11 +152,11 @@ func (v *Vehicle) GetCapacityWeight() float64 {
 // GetCapacityVolume returns vehicle capacity in cubic meters
 func (v *Vehicle) GetCapacityVolume() float64 {
 	switch v.Type {
-	case VehicleTypeMoto:
+	case VehicleTypeMotorcycle:
 		return 0.1 // 0.1 m³
-	case VehicleTypeVoiture:
+	case VehicleTypeCar:
 		return 2.0 // 2 m³
-	case VehicleTypeCamionnette:
+	case VehicleTypeVan:
 		return 10.0 // 10 m³
 	default:
 		return 0.1

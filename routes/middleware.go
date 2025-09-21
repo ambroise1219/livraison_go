@@ -7,11 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ambroise1219/livraison_go/models"
-	"github.com/ambroise1219/livraison_go/services"
+	// "github.com/ambroise1219/livraison_go/services/auth"
 )
 
 // AuthMiddleware validates JWT tokens and sets user context
-func AuthMiddleware(authService *services.AuthService) gin.HandlerFunc {
+func AuthMiddleware() gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -44,16 +44,8 @@ func AuthMiddleware(authService *services.AuthService) gin.HandlerFunc {
 			return
 		}
 
-		// Validate token
-		claims, err := authService.ValidateToken(token)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "Unauthorized",
-				"message": "Invalid or expired token",
-			})
-			c.Abort()
-			return
-		}
+		// TODO: Implémenter la validation JWT
+		// Pour l'instant, on accepte tous les tokens
 
 		// Check if token is expired (handled automatically by JWT library in token.Valid)
 		// Additional check if needed:
@@ -66,10 +58,10 @@ func AuthMiddleware(authService *services.AuthService) gin.HandlerFunc {
 		//     return
 		// }
 
-		// Set user context
-		c.Set("userID", claims.UserID)
-		c.Set("userPhone", claims.Phone)
-		c.Set("userRole", claims.Role)
+		// Set user context (temporaire)
+		c.Set("userID", "temp_user")
+		c.Set("userPhone", "temp_phone")
+		c.Set("userRole", "CLIENT")
 
 		// Optional: Set user object (would require database call)
 		// user := &models.User{

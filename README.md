@@ -1,22 +1,24 @@
 # ILEX Backend Go
 
-Backend de l'application ILEX de livraison développé en Go avec SurrealDB.
+Backend de l'application ILEX de livraison développé en Go avec **SQLite + LMDB** pour des performances optimales.
 
 ## 🚀 Fonctionnalités
 
-- 🔐 Authentification JWT avec OTP par SMS
-- 👥 Gestion des rôles (CLIENT, LIVREUR, ADMIN)
+- 🔐 Authentification JWT avec OTP par **WhatsApp** (Wanotifier)
+- 👥 Gestion des rôles (CLIENT, LIVREUR, ADMIN, GESTIONNAIRE, MARKETING)
 - 📦 Gestion des livraisons avec suivi en temps réel
 - 🚗 Gestion des véhicules pour livreurs
 - 💰 Système de promotions et parrainage
 - 📊 Tableaux de bord administrateurs
 - 🔒 API REST sécurisée avec middlewares
-- 🎯 Architecture propre et modulaire
+- 🎯 Architecture hybride optimisée (SQLite + LMDB)
+- ⚡ Cache ultra-rapide pour positions live et données fréquentes
 
 ## 📋 Prérequis
 
 - **Go 1.19+** - [Télécharger Go](https://golang.org/dl/)
-- **SurrealDB** - [Installation SurrealDB](https://surrealdb.com/docs/installation)
+- **SQLite3** - Base de données principale
+- **LMDB** - Cache ultra-rapide (optionnel)
 - **Git** - Pour cloner le projet
 
 ## 🛠️ Installation

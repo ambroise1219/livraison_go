@@ -10,7 +10,7 @@ import (
 type OTP struct {
 	ID        string    `json:"id"`
 	Phone     string    `json:"phone" validate:"required,min=8,max=15"`
-	Code      string    `json:"code" validate:"required,len=6"`
+	Code      string    `json:"code" validate:"required,len=4"`
 	ExpiresAt time.Time `json:"expiresAt"`
 	CreatedAt time.Time `json:"createdAt"`
 }
@@ -23,21 +23,21 @@ type SendOTPRequest struct {
 // VerifyOTPRequest represents request for verifying OTP
 type VerifyOTPRequest struct {
 	Phone string `json:"phone" validate:"required,min=8,max=15"`
-	Code  string `json:"code" validate:"required,len=6"`
+	Code  string `json:"code" validate:"required,len=4"`
 }
 
 // LoginRequest represents login request
 type LoginRequest struct {
 	Phone string `json:"phone" validate:"required,min=8,max=15"`
-	Code  string `json:"code" validate:"required,len=6"`
+	Code  string `json:"code" validate:"required,len=4"`
 }
 
 // AuthResponse represents authentication response
 type AuthResponse struct {
-	Token        string       `json:"token"`
-	RefreshToken string       `json:"refreshToken"`
+	Token        string        `json:"token"`
+	RefreshToken string        `json:"refreshToken"`
 	User         *UserResponse `json:"user"`
-	ExpiresAt    time.Time    `json:"expiresAt"`
+	ExpiresAt    time.Time     `json:"expiresAt"`
 }
 
 // RefreshToken represents a refresh token record
@@ -81,8 +81,14 @@ type JWTClaims struct {
 	UserID string   `json:"user_id"`
 	Phone  string   `json:"phone"`
 	Role   UserRole `json:"role"`
+	Exp    int64    `json:"exp"`
+	Iat    int64    `json:"iat"`
 }
 
+// IsExpired checks if JWT token is expired
+func (c *JWTClaims) IsExpired() bool {
+	return time.Now().Unix() > c.Exp
+}
 
 // PasswordResetRequest represents password reset request
 type PasswordResetRequest struct {
@@ -91,7 +97,7 @@ type PasswordResetRequest struct {
 
 // ChangePhoneRequest represents phone change request
 type ChangePhoneRequest struct {
-	NewPhone    string `json:"newPhone" validate:"required,min=8,max=15"`
-	OTPCode     string `json:"otpCode" validate:"required,len=6"`
+	NewPhone     string `json:"newPhone" validate:"required,min=8,max=15"`
+	OTPCode      string `json:"otpCode" validate:"required,len=4"`
 	CurrentPhone string `json:"currentPhone" validate:"required,min=8,max=15"`
 }

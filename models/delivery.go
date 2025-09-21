@@ -9,7 +9,7 @@ type DeliveryStatus string
 
 const (
 	DeliveryStatusPending              DeliveryStatus = "PENDING"
-	DeliveryStatusAccepted             DeliveryStatus = "ACCEPTED"
+	DeliveryStatusAssigned             DeliveryStatus = "ASSIGNED"
 	DeliveryStatusPickedUp             DeliveryStatus = "PICKED_UP"
 	DeliveryStatusDelivered            DeliveryStatus = "DELIVERED"
 	DeliveryStatusCancelled            DeliveryStatus = "CANCELLED"
@@ -26,7 +26,6 @@ const (
 	DeliveryStatusArrivedAtDestination DeliveryStatus = "ARRIVED_AT_DESTINATION"
 	DeliveryStatusUnloadingInProgress  DeliveryStatus = "UNLOADING_IN_PROGRESS"
 	DeliveryStatusUnloadingCompleted   DeliveryStatus = "UNLOADING_COMPLETED"
-	DeliveryStatusArrivedAtDropoff     DeliveryStatus = "ARRIVED_AT_DROPOFF"
 	DeliveryStatusEnRoute              DeliveryStatus = "EN_ROUTE"
 	DeliveryStatusDispatchInProgress   DeliveryStatus = "DISPATCH_IN_PROGRESS"
 	DeliveryStatusSorted               DeliveryStatus = "SORTED"
@@ -37,9 +36,9 @@ const (
 type DeliveryType string
 
 const (
-	DeliveryTypeSimple      DeliveryType = "SIMPLE"
+	DeliveryTypeStandard    DeliveryType = "STANDARD"
 	DeliveryTypeExpress     DeliveryType = "EXPRESS"
-	DeliveryTypeGroupee     DeliveryType = "GROUPEE"
+	DeliveryTypeGrouped     DeliveryType = "GROUPED"
 	DeliveryTypeDemenagement DeliveryType = "DEMENAGEMENT"
 )
 
@@ -47,9 +46,9 @@ const (
 type VehicleType string
 
 const (
-	VehicleTypeMoto        VehicleType = "MOTO"
-	VehicleTypeVoiture     VehicleType = "VOITURE"
-	VehicleTypeCamionnette VehicleType = "CAMIONNETTE"
+	VehicleTypeMotorcycle  VehicleType = "MOTORCYCLE"
+	VehicleTypeCar         VehicleType = "CAR"
+	VehicleTypeVan         VehicleType = "VAN"
 )
 
 // PaymentMethod defines the payment method enumeration
@@ -233,7 +232,7 @@ type GroupedDelivery struct {
 // IsValidStatus checks if the delivery status is valid
 func (s DeliveryStatus) IsValid() bool {
 	validStatuses := []DeliveryStatus{
-		DeliveryStatusPending, DeliveryStatusAccepted, DeliveryStatusPickedUp,
+		DeliveryStatusPending, DeliveryStatusAssigned, DeliveryStatusPickedUp,
 		DeliveryStatusDelivered, DeliveryStatusCancelled, DeliveryStatusZoneAssigned,
 		DeliveryStatusPickupInProgress, DeliveryStatusPickupCompleted,
 		DeliveryStatusDeliveryInProgress, DeliveryStatusAssignedToHelper,
@@ -241,7 +240,7 @@ func (s DeliveryStatus) IsValid() bool {
 		DeliveryStatusLoadingInProgress, DeliveryStatusLoadingCompleted,
 		DeliveryStatusInTransit, DeliveryStatusArrivedAtDestination,
 		DeliveryStatusUnloadingInProgress, DeliveryStatusUnloadingCompleted,
-		DeliveryStatusArrivedAtDropoff, DeliveryStatusEnRoute,
+		DeliveryStatusEnRoute,
 		DeliveryStatusDispatchInProgress, DeliveryStatusSorted,
 		DeliveryStatusSortingInProgress,
 	}
@@ -256,13 +255,13 @@ func (s DeliveryStatus) IsValid() bool {
 
 // IsValidType checks if the delivery type is valid
 func (t DeliveryType) IsValid() bool {
-	return t == DeliveryTypeSimple || t == DeliveryTypeExpress || 
-		   t == DeliveryTypeGroupee || t == DeliveryTypeDemenagement
+	return t == DeliveryTypeStandard || t == DeliveryTypeExpress || 
+		   t == DeliveryTypeGrouped || t == DeliveryTypeDemenagement
 }
 
 // IsValidVehicleType checks if the vehicle type is valid
 func (vt VehicleType) IsValid() bool {
-	return vt == VehicleTypeMoto || vt == VehicleTypeVoiture || vt == VehicleTypeCamionnette
+	return vt == VehicleTypeMotorcycle || vt == VehicleTypeCar || vt == VehicleTypeVan
 }
 
 // IsValidPaymentMethod checks if the payment method is valid
@@ -310,7 +309,7 @@ func (d *Delivery) RequiresSpecialVehicle() bool {
 
 // IsGroupedDelivery checks if this is a grouped delivery
 func (d *Delivery) IsGroupedDelivery() bool {
-	return d.Type == DeliveryTypeGroupee
+	return d.Type == DeliveryTypeGrouped
 }
 
 // IsMovingDelivery checks if this is a moving delivery
@@ -323,9 +322,9 @@ func (d *Delivery) GetExpectedDuration() int {
 	switch d.Type {
 	case DeliveryTypeExpress:
 		return 30 // 30 minutes
-	case DeliveryTypeSimple:
+	case DeliveryTypeStandard:
 		return 60 // 1 hour
-	case DeliveryTypeGroupee:
+	case DeliveryTypeGrouped:
 		return 120 // 2 hours
 	case DeliveryTypeDemenagement:
 		return 480 // 8 hours

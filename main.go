@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/ambroise1219/livraison_go/config"
+	"github.com/ambroise1219/livraison_go/database"
 	"github.com/ambroise1219/livraison_go/db"
 	"github.com/ambroise1219/livraison_go/handlers"
 	"github.com/ambroise1219/livraison_go/routes"
@@ -14,7 +15,7 @@ import (
 func main() {
 	// Charger la configuration
 	cfg := config.GetConfig()
-	
+
 	// Définir le mode Gin selon l'environnement
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -24,12 +25,19 @@ func main() {
 		gin.SetMode(gin.TestMode)
 	}
 
-	// Initialiser la connexion à la base de données
-	log.Println("🔗 Connexion à SurrealDB...")
-	if err := db.InitDB(cfg); err != nil {
-		log.Fatalf("❌ Erreur lors de l'initialisation de SurrealDB: %v", err)
+	// Initialiser PostgreSQL via Prisma
+	log.Println("🔗 Connexion à PostgreSQL...")
+	if err := database.InitPrisma(); err != nil {
+		log.Fatalf("❌ Erreur lors de l'initialisation de PostgreSQL: %v", err)
 	}
-	log.Println("✅ Connexion à SurrealDB établie avec succès")
+	defer database.ClosePrisma()
+	log.Println("✅ Connexion à PostgreSQL établie avec succès")
+
+	// Initialiser le client Prisma dans le package db
+	if err := db.InitializePrisma(); err != nil {
+		log.Fatalf("❌ Erreur lors de l'initialisation du client Prisma: %v", err)
+	}
+	defer db.ClosePrisma()
 
 	// Initialiser les handlers
 	log.Println("🔧 Initialisation des handlers...")
@@ -39,19 +47,19 @@ func main() {
 	// Configurer les routes
 	log.Println("🚀 Configuration des routes...")
 	router := routes.SetupRoutes()
-	
+
 	// Afficher les informations de démarrage
 	log.Printf("🌟 Serveur ILEX Backend démarré:")
 	log.Printf("   🏠 Environnement: %s", cfg.Environment)
 	log.Printf("   🌐 Adresse: %s:%s", cfg.ServerHost, cfg.ServerPort)
-	log.Printf("   📊 SurrealDB: %s", cfg.SurrealDBURL)
+	log.Printf("   🐘 PostgreSQL: livraison_db")
 	log.Printf("   📈 Health Check: http://%s:%s/health", cfg.ServerHost, cfg.ServerPort)
 	log.Printf("   📚 API Documentation: http://%s:%s/api/v1", cfg.ServerHost, cfg.ServerPort)
-	
+
 	// Démarrer le serveur
 	address := cfg.ServerHost + ":" + cfg.ServerPort
 	log.Printf("🚀 Serveur en écoute sur %s", address)
-	
+
 	if err := router.Run(address); err != nil {
 		log.Fatalf("❌ Erreur lors du démarrage du serveur: %v", err)
 	}
@@ -69,20 +77,8 @@ func init() {
 	if os.Getenv("ENVIRONMENT") == "" {
 		os.Setenv("ENVIRONMENT", "development")
 	}
-	if os.Getenv("SURREALDB_URL") == "" {
-		os.Setenv("SURREALDB_URL", "ws://172.187.248.156:8000/rpc")
-	}
-	if os.Getenv("SURREALDB_USERNAME") == "" {
-		os.Setenv("SURREALDB_USERNAME", "root")
-	}
-	if os.Getenv("SURREALDB_PASSWORD") == "" {
-		os.Setenv("SURREALDB_PASSWORD", "root")
-	}
-	if os.Getenv("SURREALDB_NS") == "" {
-		os.Setenv("SURREALDB_NS", "ilex")
-	}
-	if os.Getenv("SURREALDB_DB") == "" {
-		os.Setenv("SURREALDB_DB", "production")
+	if os.Getenv("DATABASE_URL") == "" {
+		os.Setenv("DATABASE_URL", "postgresql://livraison_user:livraison_pass@localhost:5432/livraison_db?sslmode=disable")
 	}
 	if os.Getenv("JWT_SECRET") == "" {
 		os.Setenv("JWT_SECRET", "dev-jwt-secret-key-change-in-production")
