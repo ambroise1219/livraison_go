@@ -1,0 +1,69 @@
+{
+  "info": {
+    "name": "ILEX Promos & Pricing API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection complète pour les codes promos et calculs de prix"
+  },
+  "item": [
+    {
+      "name": "Pricing Calculator",
+      "item": [
+        {
+          "name": "Calculate Standard Delivery Price",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{BASE_URL}}/api/deliveries/calculate-price", "host": ["{{BASE_URL}}"], "path": ["api", "deliveries", "calculate-price"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"STANDARD\",\n  \"vehicleType\": \"MOTORCYCLE\",\n  \"pickupLat\": 5.316667,\n  \"pickupLng\": -4.033333,\n  \"dropoffLat\": 5.325,\n  \"dropoffLng\": -4.025,\n  \"weightKg\": 2.5\n}"
+            }
+          }
+        },
+        {
+          "name": "Calculate Express Delivery Price",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{BASE_URL}}/api/deliveries/calculate-price", "host": ["{{BASE_URL}}"], "path": ["api", "deliveries", "calculate-price"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"EXPRESS\",\n  \"vehicleType\": \"CAR\",\n  \"pickupLat\": 5.316667,\n  \"pickupLng\": -4.033333,\n  \"dropoffLat\": 5.325,\n  \"dropoffLng\": -4.025,\n  \"weightKg\": 5.0\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Promo Code Validation",
+      "item": [
+        {
+          "name": "Validate WELCOME10 Code",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{BASE_URL}}/api/promo/validate", "host": ["{{BASE_URL}}"], "path": ["api", "promo", "validate"]},
+            "body": {"mode": "raw", "raw": "{\n  \"code\": \"WELCOME10\",\n  \"amount\": 2500.0\n}"}
+          }
+        },
+        {
+          "name": "Apply Promo Code to Delivery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/promo/use", "host": ["{{BASE_URL}}"], "path": ["api", "promo", "use"]},
+            "body": {"mode": "raw", "raw": "{\n  \"code\": \"WELCOME10\",\n  \"amount\": 2500.0,\n  \"deliveryId\": \"{{DELIVERY_ID}}\"\n}"}
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "BASE_URL", "value": "http://localhost:8080"},
+    {"key": "ACCESS_TOKEN", "value": ""},
+    {"key": "DELIVERY_ID", "value": ""}
+  ]
+}

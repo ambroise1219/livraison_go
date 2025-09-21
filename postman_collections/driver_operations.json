@@ -1,0 +1,52 @@
+{
+  "info": {
+    "name": "ILEX Driver Operations API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection complète pour les opérations livreurs"
+  },
+  "item": [
+    {
+      "name": "Driver Dashboard",
+      "item": [
+        {
+          "name": "Get Available Deliveries",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{DRIVER_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/deliveries/available", "host": ["{{BASE_URL}}"], "path": ["api", "deliveries", "available"]}
+          }
+        },
+        {
+          "name": "Accept Delivery",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{DRIVER_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/deliveries/{{DELIVERY_ID}}/accept", "host": ["{{BASE_URL}}"], "path": ["api", "deliveries", "{{DELIVERY_ID}}", "accept"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Location Tracking",
+      "item": [
+        {
+          "name": "Update Driver Location",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{DRIVER_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/drivers/location", "host": ["{{BASE_URL}}"], "path": ["api", "drivers", "location"]},
+            "body": {"mode": "raw", "raw": "{\n  \"lat\": 5.318000,\n  \"lng\": -4.031500,\n  \"isAvailable\": true\n}"}
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "BASE_URL", "value": "http://localhost:8080"},
+    {"key": "DRIVER_TOKEN", "value": ""},
+    {"key": "DELIVERY_ID", "value": ""}
+  ]
+}

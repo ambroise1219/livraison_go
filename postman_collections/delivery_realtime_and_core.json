@@ -1,0 +1,50 @@
+{
+  "info": {
+    "name": "ILEX Delivery - Realtime & Core API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection complète pour le module Delivery (Core + Realtime)"
+  },
+  "item": [
+    {
+      "name": "Delivery - CRUD",
+      "item": [
+        {
+          "name": "Create Delivery (Standard)",
+          "request": {
+            "method": "POST",
+            "header": [{"key":"Content-Type","value":"application/json"}],
+            "url": {"raw": "{{BASE_URL}}/api/deliveries", "host": ["{{BASE_URL}}"], "path":["api","deliveries"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"STANDARD\",\n  \"pickupAddress\": \"Cocody\",\n  \"pickupLat\": 5.316667,\n  \"pickupLng\": -4.033333,\n  \"dropoffAddress\": \"Plateau\",\n  \"dropoffLat\": 5.325,\n  \"dropoffLng\": -4.025,\n  \"vehicleType\": \"CAR\",\n  \"paymentMethod\": \"CASH\",\n  \"packageInfo\": {\n    \"description\": \"Documents\",\n    \"weightKg\": 1.5,\n    \"size\": \"Small\",\n    \"fragile\": false\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Delivery By ID",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{BASE_URL}}/api/deliveries/{{DELIVERY_ID}}", "host":["{{BASE_URL}}"], "path":["api","deliveries","{{DELIVERY_ID}}"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Realtime - SSE",
+      "item": [
+        {
+          "name": "SSE Subscribe (Client)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{BASE_URL}}/realtime/sse/{{DELIVERY_ID}}?type=client&userId={{USER_ID}}", "host":["{{BASE_URL}}"], "path":["realtime","sse","{{DELIVERY_ID}}"], "query":[{"key":"type","value":"client"},{"key":"userId","value":"{{USER_ID}}"}]}
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key":"BASE_URL","value":"http://localhost:8080"},
+    {"key":"DELIVERY_ID","value":""},
+    {"key":"USER_ID","value":"+2250701234567"}
+  ]
+}

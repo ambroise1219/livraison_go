@@ -1,0 +1,46 @@
+{
+  "info": {
+    "name": "ILEX Auth - OTP, JWT & Profile API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection complète pour l'authentification OTP, JWT et gestion des profils utilisateur"
+  },
+  "item": [
+    {
+      "name": "Auth - OTP Flow",
+      "item": [
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{BASE_URL}}/api/auth/send-otp", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "send-otp"]},
+            "body": {"mode": "raw", "raw": "{\n  \"phone\": \"{{CLIENT_PHONE}}\"\n}"}
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "url": {"raw": "{{BASE_URL}}/api/auth/verify-otp", "host": ["{{BASE_URL}}"], "path": ["api", "auth", "verify-otp"]},
+            "body": {"mode": "raw", "raw": "{\n  \"phone\": \"{{CLIENT_PHONE}}\",\n  \"code\": \"{{OTP_CODE}}\"\n}"}
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/user/profile", "host": ["{{BASE_URL}}"], "path": ["api", "user", "profile"]}
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "BASE_URL", "value": "http://localhost:8080"},
+    {"key": "CLIENT_PHONE", "value": "+2250701234567"},
+    {"key": "OTP_CODE", "value": "123456"},
+    {"key": "ACCESS_TOKEN", "value": ""}
+  ]
+}
