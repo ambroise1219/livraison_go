@@ -32,9 +32,6 @@ func (rds *RealtimeDeliveryService) UpdateDeliveryStatusWithRealtime(deliveryID 
 	// Récupérer la livraison actuelle
 	currentDelivery, err := db.PrismaDB.Delivery.FindUnique(
 		prismadb.Delivery.ID.Equals(deliveryID),
-	).With(
-		prismadb.Delivery.PickupLocation.Fetch(),
-		prismadb.Delivery.DropoffLocation.Fetch(),
 	).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("livraison non trouvée: %v", err)
@@ -51,9 +48,6 @@ func (rds *RealtimeDeliveryService) UpdateDeliveryStatusWithRealtime(deliveryID 
 	).Update(
 		prismadb.Delivery.Status.Set(prismadb.DeliveryStatus(newStatus)),
 		prismadb.Delivery.UpdatedAt.Set(time.Now()),
-	).With(
-		prismadb.Delivery.PickupLocation.Fetch(),
-		prismadb.Delivery.DropoffLocation.Fetch(),
 	).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("échec de la mise à jour: %v", err)
@@ -108,9 +102,6 @@ func (rds *RealtimeDeliveryService) AssignDriverWithRealtime(deliveryID, driverI
 		prismadb.Delivery.DriverID.Set(driverID),
 		prismadb.Delivery.Status.Set(prismadb.DeliveryStatusAssigned),
 		prismadb.Delivery.AssignedAt.Set(time.Now()),
-	).With(
-		prismadb.Delivery.PickupLocation.Fetch(),
-		prismadb.Delivery.DropoffLocation.Fetch(),
 	).Exec(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("échec de l'assignation: %v", err)
@@ -205,12 +196,8 @@ func (rds *RealtimeDeliveryService) createTrackingEntry(deliveryID, status, note
 	ctx := context.Background()
 
 	_, err := db.PrismaDB.Tracking.CreateOne(
-		prismadb.Tracking.Delivery.Link(
-			prismadb.Delivery.ID.Equals(deliveryID),
-		),
 		prismadb.Tracking.Status.Set(status),
-		prismadb.Tracking.Notes.SetOptional(&notes),
-		prismadb.Tracking.Timestamp.Set(time.Now()),
+		prismadb.Tracking.Delivery.Link(prismadb.Delivery.ID.Equals(deliveryID)),
 	).Exec(ctx)
 
 	return err
@@ -263,8 +250,6 @@ func (rds *RealtimeDeliveryService) calculateAndSendETA(deliveryID string, drive
 	// Récupérer les informations de la livraison
 	delivery, err := db.PrismaDB.Delivery.FindUnique(
 		prismadb.Delivery.ID.Equals(deliveryID),
-	).With(
-		prismadb.Delivery.DropoffLocation.Fetch(),
 	).Exec(ctx)
 	if err != nil {
 		return err
@@ -276,11 +261,8 @@ func (rds *RealtimeDeliveryService) calculateAndSendETA(deliveryID string, drive
 		return fmt.Errorf("destination non trouvée")
 	}
 
-	dropoffLat, ok1 := dropoffLocation.Latitude()
-	dropoffLng, ok2 := dropoffLocation.Longitude()
-	if !ok1 || !ok2 {
-		return fmt.Errorf("coordonnées destination manquantes")
-	}
+	dropoffLat := dropoffLocation.Lat
+	dropoffLng := dropoffLocation.Lng
 
 	// Calculer la distance
 	distance := rds.realtimeService.CalculateDistance(
@@ -332,12 +314,8 @@ func (rds *RealtimeDeliveryService) convertToResponse(delivery *prismadb.Deliver
 			ID:      pickup.ID,
 			Address: pickup.Address,
 		}
-		if lat, ok := pickup.Latitude(); ok {
-			response.Pickup.Lat = &lat
-		}
-		if lng, ok := pickup.Longitude(); ok {
-			response.Pickup.Lng = &lng
-		}
+		response.Pickup.Lat = &pickup.Lat
+		response.Pickup.Lng = &pickup.Lng
 	}
 
 	if dropoff := delivery.DropoffLocation(); dropoff != nil {
@@ -345,12 +323,8 @@ func (rds *RealtimeDeliveryService) convertToResponse(delivery *prismadb.Deliver
 			ID:      dropoff.ID,
 			Address: dropoff.Address,
 		}
-		if lat, ok := dropoff.Latitude(); ok {
-			response.Dropoff.Lat = &lat
-		}
-		if lng, ok := dropoff.Longitude(); ok {
-			response.Dropoff.Lng = &lng
-		}
+		response.Dropoff.Lat = &dropoff.Lat
+		response.Dropoff.Lng = &dropoff.Lng
 	}
 
 	return response

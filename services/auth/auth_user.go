@@ -243,6 +243,169 @@ func (s *UserService) UpdateUser(user *models.User) error {
 	return err
 }
 
+// GetAllDrivers récupère tous les livreurs avec pagination et filtre de statut
+func (s *UserService) GetAllDrivers(page int, limit int, statusFilter string) ([]*models.User, int, error) {
+	ctx := context.Background()
+
+	// Calculer offset
+	offset := (page - 1) * limit
+
+	// Construire les conditions de filtre pour les livreurs seulement
+	conditions := []prismadb.UserWhereParam{
+		prismadb.User.Role.Equals(prismadb.UserRoleLivreur),
+	}
+
+	// Ajouter le filtre de statut si spécifié
+	if statusFilter != "" {
+		switch statusFilter {
+		case "ONLINE":
+			conditions = append(conditions, prismadb.User.DriverStatus.Equals(prismadb.DriverStatusOnline))
+		case "OFFLINE":
+			conditions = append(conditions, prismadb.User.DriverStatus.Equals(prismadb.DriverStatusOffline))
+		case "BUSY":
+			conditions = append(conditions, prismadb.User.DriverStatus.Equals(prismadb.DriverStatusBusy))
+		case "AVAILABLE":
+			conditions = append(conditions, prismadb.User.DriverStatus.Equals(prismadb.DriverStatusAvailable))
+		}
+	}
+
+	// Récupérer les livreurs avec pagination
+	drivers, err := db.PrismaDB.User.FindMany(
+		conditions...,
+	).Skip(offset).Take(limit).OrderBy(
+		prismadb.User.CreatedAt.Order(prismadb.SortOrderDesc),
+	).Exec(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Compter le total avec les mêmes conditions
+	allDrivers, err := db.PrismaDB.User.FindMany(
+		conditions...,
+	).Exec(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	total := len(allDrivers)
+
+	// Convertir les utilisateurs
+	driverModels := make([]*models.User, len(drivers))
+	for i, driver := range drivers {
+		driverModels[i] = s.convertPrismaUserToModel(&driver)
+	}
+
+	return driverModels, total, nil
+}
+
+// GetDriverStats récupère les statistiques d'un livreur
+func (s *UserService) GetDriverStats(driverID string) (map[string]interface{}, error) {
+	ctx := context.Background()
+
+	// Vérifier si l'utilisateur existe et est un livreur
+	driver, err := db.PrismaDB.User.FindUnique(
+		prismadb.User.ID.Equals(driverID),
+	).Exec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if driver.Role != prismadb.UserRoleLivreur {
+		return nil, fmt.Errorf("l'utilisateur n'est pas un livreur")
+	}
+
+	// Compter les livraisons du livreur
+	deliveries, err := db.PrismaDB.Delivery.FindMany(
+		prismadb.Delivery.DriverID.Equals(driverID),
+	).Exec(ctx)
+	if err != nil {
+		deliveries = []prismadb.DeliveryModel{} // En cas d'erreur, retourner 0
+	}
+
+	// Compter les livraisons par statut
+	var completedCount, cancelledCount, activeCount int
+	for _, delivery := range deliveries {
+		switch delivery.Status {
+		case prismadb.DeliveryStatusDelivered:
+			completedCount++
+		case prismadb.DeliveryStatusCancelled, prismadb.DeliveryStatusFailed:
+			cancelledCount++
+		case prismadb.DeliveryStatusAssigned, prismadb.DeliveryStatusPickedUp, prismadb.DeliveryStatusInTransit:
+			activeCount++
+		}
+	}
+
+	// Compter les évaluations moyennes
+	ratings, err := db.PrismaDB.Rating.FindMany(
+		prismadb.Rating.UserID.Equals(driverID),
+	).Exec(ctx)
+	if err != nil {
+		ratings = []prismadb.RatingModel{} // En cas d'erreur, retourner 0
+	}
+
+	averageRating := 0.0
+	if len(ratings) > 0 {
+		var totalRating int
+		for _, rating := range ratings {
+			totalRating += rating.Rating
+		}
+		averageRating = float64(totalRating) / float64(len(ratings))
+	}
+
+	stats := map[string]interface{}{
+		"totalDeliveries":    len(deliveries),
+		"completedDeliveries": completedCount,
+		"cancelledDeliveries": cancelledCount,
+		"activeDeliveries":   activeCount,
+		"averageRating":      averageRating,
+		"ratingsCount":       len(ratings),
+		"driverStatus":       string(driver.DriverStatus),
+		"isActive":           driver.DriverStatus == prismadb.DriverStatusOnline || driver.DriverStatus == prismadb.DriverStatusAvailable,
+	}
+
+	return stats, nil
+}
+
+// UpdateDriverStatus met à jour le statut d'un livreur
+func (s *UserService) UpdateDriverStatus(driverID string, status models.DriverStatus) error {
+	ctx := context.Background()
+
+	// Convertir le statut vers le type Prisma
+	var prismaStatus prismadb.DriverStatus
+	switch status {
+	case models.DriverStatusOffline:
+		prismaStatus = prismadb.DriverStatusOffline
+	case models.DriverStatusOnline:
+		prismaStatus = prismadb.DriverStatusOnline
+	case models.DriverStatusBusy:
+		prismaStatus = prismadb.DriverStatusBusy
+	case models.DriverStatusAvailable:
+		prismaStatus = prismadb.DriverStatusAvailable
+	default:
+		return fmt.Errorf("statut de livreur invalide: %s", status)
+	}
+
+	// Vérifier que l'utilisateur est un livreur
+	user, err := db.PrismaDB.User.FindUnique(
+		prismadb.User.ID.Equals(driverID),
+	).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("utilisateur non trouvé: %v", err)
+	}
+
+	if user.Role != prismadb.UserRoleLivreur {
+		return fmt.Errorf("l'utilisateur n'est pas un livreur")
+	}
+
+	// Mettre à jour le statut
+	_, err = db.PrismaDB.User.FindUnique(
+		prismadb.User.ID.Equals(driverID),
+	).Update(
+		prismadb.User.DriverStatus.Set(prismaStatus),
+	).Exec(ctx)
+
+	return err
+}
+
 // DeleteUser supprime un utilisateur
 func (s *UserService) DeleteUser(userID string) error {
 	ctx := context.Background()
@@ -250,6 +413,133 @@ func (s *UserService) DeleteUser(userID string) error {
 	_, err := db.PrismaDB.User.FindUnique(
 		prismadb.User.ID.Equals(userID),
 	).Delete().Exec(ctx)
+
+	return err
+}
+
+// GetAllUsers récupère tous les utilisateurs avec pagination et filtre
+func (s *UserService) GetAllUsers(page int, limit int, roleFilter string) ([]*models.User, int, error) {
+	ctx := context.Background()
+
+	// Calculer offset
+	offset := (page - 1) * limit
+
+	// Construire les conditions de filtre
+	var conditions []prismadb.UserWhereParam
+
+	if roleFilter != "" {
+		switch roleFilter {
+		case "CLIENT":
+			conditions = append(conditions, prismadb.User.Role.Equals(prismadb.UserRoleClient))
+		case "LIVREUR":
+			conditions = append(conditions, prismadb.User.Role.Equals(prismadb.UserRoleLivreur))
+		case "ADMIN":
+			conditions = append(conditions, prismadb.User.Role.Equals(prismadb.UserRoleAdmin))
+		case "GESTIONNAIRE":
+			conditions = append(conditions, prismadb.User.Role.Equals(prismadb.UserRoleGestionnaire))
+		}
+	}
+
+	// Récupérer les utilisateurs avec pagination
+	users, err := db.PrismaDB.User.FindMany(
+		conditions...,
+	).Skip(offset).Take(limit).OrderBy(
+		prismadb.User.CreatedAt.Order(prismadb.SortOrderDesc),
+	).Exec(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Compter le total avec les mêmes conditions
+	allUsers, err := db.PrismaDB.User.FindMany(
+		conditions...,
+	).Exec(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	total := len(allUsers)
+
+	// Convertir les utilisateurs
+	userModels := make([]*models.User, len(users))
+	for i, user := range users {
+		userModels[i] = s.convertPrismaUserToModel(&user)
+	}
+
+	return userModels, total, nil
+}
+
+// GetUserStats récupère les statistiques d'un utilisateur
+func (s *UserService) GetUserStats(userID string) (map[string]interface{}, error) {
+	ctx := context.Background()
+
+	// Vérifier si l'utilisateur existe
+	_, err := db.PrismaDB.User.FindUnique(
+		prismadb.User.ID.Equals(userID),
+	).Exec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compter les livraisons de l'utilisateur
+	deliveries, err := db.PrismaDB.Delivery.FindMany(
+		prismadb.Delivery.UserID.Equals(prismadb.String(userID)),
+	).Exec(ctx)
+	if err != nil {
+		deliveries = []prismadb.DeliveryModel{} // En cas d'erreur, retourner 0
+	}
+
+	// Compter les évaluations moyennes (si applicable)
+	ratings, err := db.PrismaDB.Rating.FindMany(
+		prismadb.Rating.UserID.Equals(userID),
+	).Exec(ctx)
+	if err != nil {
+		ratings = []prismadb.RatingModel{} // En cas d'erreur, retourner 0
+	}
+
+	averageRating := 0.0
+	if len(ratings) > 0 {
+		var totalRating int
+		for _, rating := range ratings {
+			totalRating += rating.Rating
+		}
+		averageRating = float64(totalRating) / float64(len(ratings))
+	}
+
+	stats := map[string]interface{}{
+		"deliveriesCount": len(deliveries),
+		"vehiclesCount":   0, // TODO: Implémenter si nécessaire
+		"averageRating":   averageRating,
+		"ratingsCount":    len(ratings),
+	}
+
+	return stats, nil
+}
+
+// UpdateUserRole met à jour le rôle d'un utilisateur
+func (s *UserService) UpdateUserRole(userID string, role models.UserRole) error {
+	ctx := context.Background()
+
+	// Convertir le rôle vers le type Prisma
+	var prismaRole prismadb.UserRole
+	switch role {
+	case models.UserRoleClient:
+		prismaRole = prismadb.UserRoleClient
+	case models.UserRoleLivreur:
+		prismaRole = prismadb.UserRoleLivreur
+	case models.UserRoleAdmin:
+		prismaRole = prismadb.UserRoleAdmin
+	case models.UserRoleGestionnaire:
+		prismaRole = prismadb.UserRoleGestionnaire
+	default:
+		return fmt.Errorf("rôle invalide: %s", role)
+	}
+
+	// Mettre à jour le rôle
+	_, err := db.PrismaDB.User.FindUnique(
+		prismadb.User.ID.Equals(userID),
+	).Update(
+		prismadb.User.Role.Set(prismaRole),
+	).Exec(ctx)
 
 	return err
 }

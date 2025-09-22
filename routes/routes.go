@@ -117,6 +117,12 @@ func setupProtectedRoutes(rg *gin.RouterGroup) {
 
 	// Routes administrateur
 	setupAdminRoutes(protected)
+
+	// Routes temps réel (SSE + WebSocket)
+	setupRealtimeRoutes(protected)
+
+	// Routes de support
+	setupSupportRoutes(protected)
 }
 
 // setupAuthRoutes configure les routes d'authentification protégées
@@ -278,18 +284,113 @@ func setupAdminRoutes(rg *gin.RouterGroup) {
 	}
 }
 
-// Routes WebSocket pour le temps réel (à implémenter plus tard)
-func setupWebSocketRoutes(rg *gin.RouterGroup) {
+// setupRealtimeRoutes configure les routes temps réel (SSE + WebSocket)
+func setupRealtimeRoutes(rg *gin.RouterGroup) {
+	// Initialiser le handler temps réel
+	realtimeHandler := handlers.NewRealtimeHandler()
+
+	// Routes SSE (Server-Sent Events) - connexions temps réel
+	sse := rg.Group("/sse")
+	sse.Use(middlewares.AuthMiddleware())
+	{
+		// SSE pour suivi livraison (client + driver)
+		sse.GET("/delivery/:deliveryId", realtimeHandler.SSEHandler)
+	}
+
+	// Routes WebSocket - chat et interactivité
 	ws := rg.Group("/ws")
 	ws.Use(middlewares.AuthMiddleware())
 	{
-		// Suivi en temps réel des livraisons
-		ws.GET("/delivery/:delivery_id", handlers.DeliveryWebSocket)
+		// WebSocket pour chat temps réel
+		ws.GET("/chat/:deliveryId", realtimeHandler.WebSocketHandler)
+	}
 
-		// Notifications en temps réel pour les livreurs
-		ws.GET("/driver/notifications", middlewares.RequireDriver(), handlers.DriverNotificationsWebSocket)
+	// Routes API temps réel - mises à jour
+	realtime := rg.Group("/realtime")
+	realtime.Use(middlewares.AuthMiddleware())
+	{
+		// Mise à jour position livreur
+		realtime.POST("/location/:driverId/:deliveryId", middlewares.RequireDriver(), realtimeHandler.UpdateLocationHandler)
+		// Récupérer position livreur
+		realtime.GET("/location/:driverId", realtimeHandler.GetDriverLocationHandler)
+		// Mise à jour statut livraison
+		realtime.POST("/delivery/:deliveryId/status", middlewares.RequireDriverOrAdmin(), realtimeHandler.UpdateDeliveryStatusHandler)
+		// Envoyer notification
+		realtime.POST("/notification/:userId", middlewares.RequireAdmin(), realtimeHandler.SendNotificationHandler)
+		// Calculer ETA
+		realtime.GET("/eta/:deliveryId", realtimeHandler.CalculateETAHandler)
+		// Statistiques temps réel
+		realtime.GET("/stats", middlewares.RequireAdmin(), realtimeHandler.GetRealtimeStatsHandler)
+	}
+}
 
-		// Notifications en temps réel pour les clients
-		ws.GET("/client/notifications", middlewares.RequireClient(), handlers.ClientNotificationsWebSocket)
+// setupSupportRoutes configure les routes du système de support
+func setupSupportRoutes(rg *gin.RouterGroup) {
+	// Initialiser les handlers de support
+	handlers.InitSupportHandlers()
+
+	// Routes de support (tickets)
+	support := rg.Group("/support")
+	{
+		// Routes tickets - accessibles à tous les utilisateurs authentifiés
+		tickets := support.Group("/tickets")
+		{
+			// Créer un nouveau ticket (client/livreur)
+			tickets.POST("/", handlers.CreateSupportTicket)
+			
+			// Lister les tickets (selon permissions)
+			tickets.GET("/", handlers.GetSupportTickets)
+			
+			// Détails d'un ticket
+			tickets.GET("/:ticket_id", handlers.GetSupportTicketByID)
+			
+			// Messages d'un ticket
+			tickets.GET("/:ticket_id/messages", handlers.GetSupportMessages)
+			tickets.POST("/:ticket_id/messages", handlers.AddSupportMessage)
+			
+			// Historique des réassignations (staff seulement)
+			tickets.GET("/:ticket_id/history", middlewares.RequireStaff(), handlers.GetReassignmentHistory)
+			
+			// Routes staff seulement
+			staffRoutes := tickets.Group("/")
+			staffRoutes.Use(middlewares.RequireStaff())
+			{
+				// Mettre à jour le statut d'un ticket
+				staffRoutes.PUT("/:ticket_id/status", handlers.UpdateSupportTicketStatus)
+				
+				// Réassigner un ticket
+				staffRoutes.POST("/:ticket_id/reassign", handlers.ReassignSupportTicket)
+			}
+		}
+		
+		// Statistiques de support
+		support.GET("/stats", handlers.GetSupportStats)
+	}
+
+	// Routes de chat interne (staff seulement)
+	internal := rg.Group("/internal")
+	internal.Use(middlewares.RequireStaff())
+	{
+		// Groupes de chat interne
+		groups := internal.Group("/groups")
+		{
+			// Créer un groupe
+			groups.POST("/", handlers.CreateInternalGroup)
+			
+			// Lister mes groupes
+			groups.GET("/", handlers.GetInternalGroups)
+			
+			// Messages d'un groupe
+			groups.GET("/:group_id/messages", handlers.GetGroupMessages)
+			groups.POST("/:group_id/messages", handlers.AddGroupMessage)
+		}
+	}
+
+	// Routes admin pour contact direct
+	adminSupport := rg.Group("/admin/support")
+	adminSupport.Use(middlewares.RequireStaff())
+	{
+		// Initier un contact direct avec un utilisateur
+		adminSupport.POST("/contact", handlers.InitiateDirectContact)
 	}
 }

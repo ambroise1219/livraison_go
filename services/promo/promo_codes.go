@@ -222,34 +222,15 @@ func (s *PromoCodesService) promoCodeExists(code string) (bool, error) {
 func (s *PromoCodesService) savePromo(promo *models.Promo) error {
 	ctx := context.Background()
 	
-	// Préparer les paramètres de création
-	createParams := []prismadb.PromoSetParam{
-		prismadb.Promo.ID.Set(promo.ID),
+	// TODO: Simplification temporaire - implémenter les champs optionnels plus tard
+	
+	_, err := db.PrismaDB.Promo.CreateOne(
 		prismadb.Promo.Code.Set(promo.Code),
 		prismadb.Promo.Type.Set(prismadb.PromoType(promo.Type)),
 		prismadb.Promo.Value.Set(promo.Value),
-		prismadb.Promo.StartDate.Set(promo.StartDate),
-		prismadb.Promo.EndDate.Set(promo.EndDate),
-		prismadb.Promo.IsActive.Set(promo.IsActive),
-		prismadb.Promo.CreatedAt.Set(promo.CreatedAt),
-		prismadb.Promo.UpdatedAt.Set(promo.UpdatedAt),
-	}
-	
-	// Ajouter les champs optionnels
-	if promo.Description != nil {
-		createParams = append(createParams, prismadb.Promo.Description.SetOptional(promo.Description))
-	}
-	if promo.MinPurchaseAmount != nil {
-		createParams = append(createParams, prismadb.Promo.MinPurchaseAmount.SetOptional(promo.MinPurchaseAmount))
-	}
-	if promo.MaxUsage != nil {
-		createParams = append(createParams, prismadb.Promo.MaxUsage.SetOptional(promo.MaxUsage))
-	}
-	if promo.UsageCount != nil {
-		createParams = append(createParams, prismadb.Promo.UsageCount.SetOptional(promo.UsageCount))
-	}
-	
-	_, err := db.PrismaDB.Promo.CreateOne(createParams...).Exec(ctx)
+		prismadb.Promo.ValidFrom.Set(promo.StartDate),
+		prismadb.Promo.ValidUntil.Set(promo.EndDate),
+	).Exec(ctx)
 	return err
 }
 
@@ -275,29 +256,15 @@ func (s *PromoCodesService) getPromoByID(promoID string) (*models.Promo, error) 
 func (s *PromoCodesService) updatePromo(promo *models.Promo) error {
 	ctx := context.Background()
 	
-	// Préparer les paramètres de mise à jour
-	updateParams := []prismadb.PromoSetParam{
-		prismadb.Promo.Value.Set(promo.Value),
-		prismadb.Promo.StartDate.Set(promo.StartDate),
-		prismadb.Promo.EndDate.Set(promo.EndDate),
-		prismadb.Promo.IsActive.Set(promo.IsActive),
-		prismadb.Promo.UpdatedAt.Set(promo.UpdatedAt),
-	}
-	
-	// Ajouter les champs optionnels
-	if promo.Description != nil {
-		updateParams = append(updateParams, prismadb.Promo.Description.SetOptional(promo.Description))
-	}
-	if promo.MinPurchaseAmount != nil {
-		updateParams = append(updateParams, prismadb.Promo.MinPurchaseAmount.SetOptional(promo.MinPurchaseAmount))
-	}
-	if promo.MaxUsage != nil {
-		updateParams = append(updateParams, prismadb.Promo.MaxUsage.SetOptional(promo.MaxUsage))
-	}
-	
 	_, err := db.PrismaDB.Promo.FindUnique(
 		prismadb.Promo.ID.Equals(promo.ID),
-	).Update(updateParams...).Exec(ctx)
+	).Update(
+		prismadb.Promo.Value.Set(promo.Value),
+		prismadb.Promo.ValidFrom.Set(promo.StartDate),
+		prismadb.Promo.ValidUntil.Set(promo.EndDate),
+		prismadb.Promo.IsActive.Set(promo.IsActive),
+		prismadb.Promo.UpdatedAt.Set(promo.UpdatedAt),
+	).Exec(ctx)
 	
 	return err
 }
@@ -309,8 +276,8 @@ func (s *PromoCodesService) convertPrismaPromoToModel(prismaPromo *prismadb.Prom
 		Code:      prismaPromo.Code,
 		Type:      models.PromoType(prismaPromo.Type),
 		Value:     prismaPromo.Value,
-		StartDate: prismaPromo.StartDate,
-		EndDate:   prismaPromo.EndDate,
+		StartDate: prismaPromo.ValidFrom,
+		EndDate:   prismaPromo.ValidUntil,
 		IsActive:  prismaPromo.IsActive,
 		CreatedAt: prismaPromo.CreatedAt,
 		UpdatedAt: prismaPromo.UpdatedAt,
@@ -326,9 +293,128 @@ func (s *PromoCodesService) convertPrismaPromoToModel(prismaPromo *prismadb.Prom
 	if maxUsage, ok := prismaPromo.MaxUsage(); ok {
 		promo.MaxUsage = &maxUsage
 	}
-	if usageCount, ok := prismaPromo.UsageCount(); ok {
-		promo.UsageCount = &usageCount
-	}
+	promo.UsageCount = &prismaPromo.UsageCount
 	
 	return promo
+}
+
+// GetAllPromotions récupère toutes les promotions avec pagination et filtres (admin seulement)
+func (s *PromoCodesService) GetAllPromotions(page int, limit int, filters map[string]string) ([]*models.Promo, int, error) {
+	ctx := context.Background()
+
+	// Calculer offset
+	offset := (page - 1) * limit
+
+	// Construire les conditions de filtre
+	var conditions []prismadb.PromoWhereParam
+
+	// Appliquer les filtres
+	if status, exists := filters["status"]; exists && status != "" {
+		if status == "active" {
+			conditions = append(conditions, prismadb.Promo.IsActive.Equals(true))
+		} else if status == "inactive" {
+			conditions = append(conditions, prismadb.Promo.IsActive.Equals(false))
+		}
+	}
+
+	if promoType, exists := filters["type"]; exists && promoType != "" {
+		switch promoType {
+		case "PERCENTAGE":
+			conditions = append(conditions, prismadb.Promo.Type.Equals(prismadb.PromoTypePercentage))
+		case "FIXED_AMOUNT":
+			conditions = append(conditions, prismadb.Promo.Type.Equals(prismadb.PromoTypeFixedAmount))
+		case "FREE_DELIVERY":
+			conditions = append(conditions, prismadb.Promo.Type.Equals(prismadb.PromoTypeFreeDelivery))
+		}
+	}
+
+	// Récupérer les promotions avec pagination
+	promos, err := db.PrismaDB.Promo.FindMany(
+		conditions...,
+	).Skip(offset).Take(limit).OrderBy(
+		prismadb.Promo.CreatedAt.Order(prismadb.SortOrderDesc),
+	).Exec(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Compter le total avec les mêmes filtres
+	allPromos, err := db.PrismaDB.Promo.FindMany(
+		conditions...,
+	).Exec(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	total := len(allPromos)
+
+	// Convertir les promotions
+	promoModels := make([]*models.Promo, len(promos))
+	for i, promo := range promos {
+		promoModels[i] = s.convertPrismaPromoToModel(&promo)
+	}
+
+	return promoModels, total, nil
+}
+
+// GetAllPromotionStats récupère les statistiques de toutes les promotions (admin seulement)
+func (s *PromoCodesService) GetAllPromotionStats() (map[string]interface{}, error) {
+	ctx := context.Background()
+
+	// Compter le total des promotions
+	allPromos, err := db.PrismaDB.Promo.FindMany().Exec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compter les promotions actives
+	activePromos, err := db.PrismaDB.Promo.FindMany(
+		prismadb.Promo.IsActive.Equals(true),
+	).Exec(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compter les promotions par type
+	percentagePromos, _ := db.PrismaDB.Promo.FindMany(
+		prismadb.Promo.Type.Equals(prismadb.PromoTypePercentage),
+	).Exec(ctx)
+	fixedAmountPromos, _ := db.PrismaDB.Promo.FindMany(
+		prismadb.Promo.Type.Equals(prismadb.PromoTypeFixedAmount),
+	).Exec(ctx)
+	freeDeliveryPromos, _ := db.PrismaDB.Promo.FindMany(
+		prismadb.Promo.Type.Equals(prismadb.PromoTypeFreeDelivery),
+	).Exec(ctx)
+
+	// Calculer les statistiques d'utilisation
+	var totalUsage int
+	var totalSavings float64
+	for _, promo := range allPromos {
+		totalUsage += promo.UsageCount
+		// TODO: Calculer les économies totales en fonction du type et de la valeur
+	}
+
+	stats := map[string]interface{}{
+		"total": map[string]interface{}{
+			"count":   len(allPromos),
+			"active":  len(activePromos),
+			"inactive": len(allPromos) - len(activePromos),
+		},
+		"byType": map[string]interface{}{
+			"percentage":   len(percentagePromos),
+			"fixedAmount":  len(fixedAmountPromos),
+			"freeDelivery": len(freeDeliveryPromos),
+		},
+		"usage": map[string]interface{}{
+			"totalUsage":   totalUsage,
+			"totalSavings": totalSavings,
+			"averageUsage": func() float64 {
+				if len(allPromos) > 0 {
+					return float64(totalUsage) / float64(len(allPromos))
+				}
+				return 0
+			}(),
+		},
+	}
+
+	return stats, nil
 }

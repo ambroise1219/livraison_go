@@ -142,6 +142,11 @@ func (u *User) IsAdmin() bool {
 	return u.Role == UserRoleAdmin || u.Role == UserRoleGestionnaire
 }
 
+// IsStaff checks if user is staff (admin, gestionnaire, marketing)
+func (u *User) IsStaff() bool {
+	return u.Role == UserRoleAdmin || u.Role == UserRoleGestionnaire || u.Role == UserRoleMarketing
+}
+
 // GetFullName returns the full name of the user
 func (u *User) GetFullName() string {
 	return u.FirstName + " " + u.LastName

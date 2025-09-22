@@ -19,12 +19,134 @@ enum UserRole {
   MARKETING
 }
 
+enum TicketCategory {
+  TECHNICAL
+  BILLING
+  DELIVERY
+  ACCOUNT
+  COMPLAINT
+  MARKETING
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  PENDING
+  RESOLVED
+  CLOSED
+}
+
+enum ConversationType {
+  TICKET
+  INTERNAL_GROUP
+  DIRECT
+}
+
 enum DriverStatus {
   OFFLINE
   ONLINE
   BUSY
   AVAILABLE
 }
+
+// === SUPPORT MODELS ===
+
+model SupportTicket {
+  id                    String          @id @default(cuid())
+  title                 String
+  description           String
+  category              TicketCategory
+  priority              TicketPriority  @default(MEDIUM)
+  status                TicketStatus    @default(OPEN)
+
+  // User context
+  createdBy             String          // phone or user id depending on auth
+  createdRole           UserRole
+  assignedTo            String?
+  previouslyAssignedTo  String[]
+
+  // Relations & metadata
+  relatedDeliveryId     String?
+  teamChannel           String?
+  isInternal            Boolean         @default(false)
+  participants          String[]
+
+  // Timestamps
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  reassignedAt          DateTime?
+  closedAt              DateTime?
+
+  messages              SupportMessage[] @relation("TicketMessages")
+  reassignmentLogs      ReassignmentLog[]
+
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id                String            @id @default(cuid())
+  conversationId    String
+  conversationType  ConversationType  @default(TICKET)
+  senderId          String
+  senderRole        UserRole
+  content           String
+  messageType       String            @default("text")
+  isInternal        Boolean           @default(false)
+  replyTo           String?
+
+  // Relations optionnelles
+  ticketId          String?
+  groupId           String?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  ticket            SupportTicket?    @relation("TicketMessages", fields: [ticketId], references: [id])
+  group             InternalGroupChat? @relation("GroupMessages", fields: [groupId], references: [id])
+
+  @@map("support_messages")
+}
+
+model InternalGroupChat {
+  id            String    @id @default(cuid())
+  name          String
+  description   String
+  participants  String[]
+  createdBy     String
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  messages      SupportMessage[] @relation("GroupMessages")
+
+  @@map("internal_group_chats")
+}
+
+model ReassignmentLog {
+  id        String    @id @default(cuid())
+  ticketId  String
+  fromUser  String?
+  toUser    String
+  reason    String
+  notes     String?
+  createdBy String
+  createdAt DateTime  @default(now())
+
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("reassignment_logs")
+}
+
+// === EXISTING MODELS ===
 
 model User {
   id                    String        @id @default(cuid())
@@ -66,6 +188,12 @@ model User {
   files                 File[]
   promoUsages           PromoUsage[]  @relation("PromoUsage")
   subscriptions         Subscription[] @relation("Subscription")
+  
+  // Relations temps réel
+  realtimeConnections   RealtimeConnection[] @relation("RealtimeConnection")
+  driverTrackings       DeliveryTracking[]   @relation("DriverTracking")
+  sentMessages          ChatMessage[]        @relation("MessageSender")
+  receivedMessages      ChatMessage[]        @relation("MessageReceiver")
 
   @@map("users")
 }
@@ -163,6 +291,10 @@ model Delivery {
   groupedDelivery GroupedDelivery? @relation("GroupedDelivery", fields: [groupedDeliveryId], references: [id])
   groupedDeliveryId String?
   movingService   MovingService? @relation("MovingService")
+  
+  // Relations temps réel
+  deliveryTrackings DeliveryTracking[] @relation("DeliveryTracking")
+  chatMessages      ChatMessage[]      @relation("ChatMessage")
 
   @@map("deliveries")
 }
@@ -556,4 +688,62 @@ enum SubscriptionStatus {
   INACTIVE
   CANCELLED
   EXPIRED
+}
+
+// ==== MODELS TEMPS RÉEL (SSE + WebSocket) ====
+
+model RealtimeConnection {
+  id             String   @id @default(cuid())
+  connectionType String   // "client", "driver", "admin"
+  deliveryId     String?
+  ipAddress      String
+  userAgent      String
+  connectedAt    DateTime @default(now())
+  lastPing       DateTime @updatedAt
+  isActive       Boolean  @default(true)
+  
+  // Relations
+  user           User     @relation("RealtimeConnection", fields: [userId], references: [id])
+  userId         String
+
+  @@map("realtime_connections")
+}
+
+model DeliveryTracking {
+  id         String   @id @default(cuid())
+  latitude   Float
+  longitude  Float
+  accuracy   Float?
+  speed      Float?
+  heading    Float?
+  timestamp  DateTime @default(now())
+  createdAt  DateTime @default(now())
+  
+  // Relations
+  delivery   Delivery @relation("DeliveryTracking", fields: [deliveryId], references: [id])
+  deliveryId String
+  driver     User     @relation("DriverTracking", fields: [driverId], references: [id])
+  driverId   String
+
+  @@map("delivery_trackings")
+}
+
+model ChatMessage {
+  id          String                 @id @default(cuid())
+  chatId      String                 // Généralement deliveryId
+  messageType String                 @default("text") // "text", "image", "location"
+  content     String
+  metadata    Json?                  // Données additionnelles (coordonnées, etc.)
+  isRead      Boolean                @default(false)
+  createdAt   DateTime               @default(now())
+  
+  // Relations
+  delivery    Delivery               @relation("ChatMessage", fields: [deliveryId], references: [id])
+  deliveryId  String
+  sender      User                   @relation("MessageSender", fields: [senderId], references: [id])
+  senderId    String
+  receiver    User                   @relation("MessageReceiver", fields: [receiverId], references: [id])
+  receiverId  String
+
+  @@map("chat_messages")
 }

@@ -64,6 +64,11 @@ func RequireClientOrAdmin() gin.HandlerFunc {
 	return RequireRole(models.UserRoleClient, models.UserRoleAdmin)
 }
 
+// RequireStaff middleware pour tous les membres du staff (Admin, Gestionnaire, Marketing)
+func RequireStaff() gin.HandlerFunc {
+	return RequireRole(models.UserRoleAdmin, models.UserRoleGestionnaire, models.UserRoleMarketing)
+}
+
 // RequireAuthenticatedUser middleware qui vérifie seulement qu'un utilisateur est connecté
 func RequireAuthenticatedUser() gin.HandlerFunc {
 	return func(c *gin.Context) {

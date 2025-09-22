@@ -93,38 +93,9 @@ type CreateRatingRequest struct {
 	Comment    *string `json:"comment,omitempty" validate:"omitempty,max=500"`
 }
 
-// Package représente un colis détaillé
-type Package struct {
-	ID          string     `json:"id"`
-	Description *string    `json:"description,omitempty"`
-	Weight      *float64   `json:"weight,omitempty"`      // en kg
-	Dimensions  *string    `json:"dimensions,omitempty"`  // "length x width x height"
-	IsFragile   bool       `json:"isFragile"`
-	Value       *float64   `json:"value,omitempty"`       // valeur en FCFA pour assurance
-	DeliveryID  string     `json:"deliveryId"`
-	LocationID  *string    `json:"locationId,omitempty"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
-}
+// Package redeclaré supprimé - utiliser celui de delivery.go
 
-// CreatePackageRequest représente une demande de création de colis
-type CreatePackageRequest struct {
-	DeliveryID  string   `json:"deliveryId" validate:"required"`
-	Description *string  `json:"description,omitempty" validate:"omitempty,max=200"`
-	Weight      *float64 `json:"weight,omitempty" validate:"omitempty,gt=0"`
-	Dimensions  *string  `json:"dimensions,omitempty" validate:"omitempty,max=50"`
-	IsFragile   *bool    `json:"isFragile,omitempty"`
-	Value       *float64 `json:"value,omitempty" validate:"omitempty,gt=0"`
-}
-
-// UpdatePackageRequest représente une demande de mise à jour de colis
-type UpdatePackageRequest struct {
-	Description *string  `json:"description,omitempty" validate:"omitempty,max=200"`
-	Weight      *float64 `json:"weight,omitempty" validate:"omitempty,gt=0"`
-	Dimensions  *string  `json:"dimensions,omitempty" validate:"omitempty,max=50"`
-	IsFragile   *bool    `json:"isFragile,omitempty"`
-	Value       *float64 `json:"value,omitempty" validate:"omitempty,gt=0"`
-}
+// CreatePackageRequest et UpdatePackageRequest déplacés vers delivery.go
 
 // Tracking représente le suivi d'une livraison
 type Tracking struct {
@@ -245,34 +216,7 @@ func (r *Rating) ToResponse() map[string]interface{} {
 	return response
 }
 
-// ToResponse convertit un Package en réponse API
-func (p *Package) ToResponse() map[string]interface{} {
-	response := map[string]interface{}{
-		"id":         p.ID,
-		"isFragile":  p.IsFragile,
-		"deliveryId": p.DeliveryID,
-		"createdAt":  p.CreatedAt,
-		"updatedAt":  p.UpdatedAt,
-	}
-	
-	if p.Description != nil {
-		response["description"] = *p.Description
-	}
-	if p.Weight != nil {
-		response["weight"] = *p.Weight
-	}
-	if p.Dimensions != nil {
-		response["dimensions"] = *p.Dimensions
-	}
-	if p.Value != nil {
-		response["value"] = *p.Value
-	}
-	if p.LocationID != nil {
-		response["locationId"] = *p.LocationID
-	}
-	
-	return response
-}
+// ToResponse pour Package déplacé vers delivery.go
 
 // ToResponse convertit un Tracking en réponse API
 func (t *Tracking) ToResponse() map[string]interface{} {

@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/go-redis/redis/v8"
+	"context"
 )
 
 type Config struct {
@@ -54,6 +56,12 @@ type Config struct {
 	// Wanotifier (WhatsApp) Webhook
 	WanotifierWebhookURL string
 	WanotifierDebug      bool
+
+	// Redis Configuration (pour temps réel)
+	RedisHost     string
+	RedisPort     string
+	RedisPassword string
+	RedisDB       int
 }
 
 var AppConfig *Config
@@ -110,6 +118,12 @@ func LoadConfig() *Config {
 		// Wanotifier
 		WanotifierWebhookURL: getEnv("WANOTIFIER_WEBHOOK_URL", ""),
 		WanotifierDebug:      getEnvBool("WANOTIFIER_DEBUG", false),
+
+		// Redis (pour temps réel SSE/WebSocket)
+		RedisHost:     getEnv("REDIS_HOST", "localhost"),
+		RedisPort:     getEnv("REDIS_PORT", "6379"),
+		RedisPassword: getEnv("REDIS_PASSWORD", ""),
+		RedisDB:       getEnvInt("REDIS_DB", 0),
 	}
 
 	AppConfig = config
@@ -167,4 +181,32 @@ func parseFloat(s string) (float64, error) {
 	var result float64
 	_, err := fmt.Sscanf(s, "%f", &result)
 	return result, err
+}
+
+// Redis client global
+var redisClient *redis.Client
+
+// GetRedisClient returns the Redis client instance
+func GetRedisClient() *redis.Client {
+	if redisClient == nil {
+		cfg := GetConfig()
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     fmt.Sprintf("%s:%s", cfg.RedisHost, cfg.RedisPort),
+			Password: cfg.RedisPassword,
+			DB:       cfg.RedisDB,
+		})
+
+		// Test de connexion
+		ctx := context.Background()
+		if err := redisClient.Ping(ctx).Err(); err != nil {
+			log.Printf("⚠️  Redis connexion échouée (mode dégradé): %v", err)
+			// En développement, on peut continuer sans Redis
+			if cfg.Environment == "production" {
+				log.Fatalf("❌ Redis requis en production: %v", err)
+			}
+		} else {
+			log.Printf("✅ Redis connecté sur %s:%s", cfg.RedisHost, cfg.RedisPort)
+		}
+	}
+	return redisClient
 }

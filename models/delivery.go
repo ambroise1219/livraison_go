@@ -13,6 +13,8 @@ const (
 	DeliveryStatusPickedUp             DeliveryStatus = "PICKED_UP"
 	DeliveryStatusDelivered            DeliveryStatus = "DELIVERED"
 	DeliveryStatusCancelled            DeliveryStatus = "CANCELLED"
+	DeliveryStatusCanceled             DeliveryStatus = "CANCELLED"
+	DeliveryStatusInProgress           DeliveryStatus = "IN_PROGRESS"
 	DeliveryStatusZoneAssigned         DeliveryStatus = "ZONE_ASSIGNED"
 	DeliveryStatusPickupInProgress     DeliveryStatus = "PICKUP_IN_PROGRESS"
 	DeliveryStatusPickupCompleted      DeliveryStatus = "PICKUP_COMPLETED"
@@ -119,6 +121,71 @@ type UpdateDeliveryRequest struct {
 type AssignDeliveryRequest struct {
 	DeliveryID string  `json:"deliveryId" validate:"required"`
 	DriverID   *string `json:"driverId,omitempty"` // If empty, auto-assign
+}
+
+// UpdateSimpleDeliveryRequest represents request for updating a simple delivery
+type UpdateSimpleDeliveryRequest struct {
+	Status         *DeliveryStatus `json:"status,omitempty"`
+	LivreurID      *string         `json:"livreurId,omitempty"`
+	WaitingMin     *float64        `json:"waitingMin,omitempty"`
+	FinalPrice     *float64        `json:"finalPrice,omitempty" validate:"omitempty,gte=0"`
+	DropoffAddress *string         `json:"dropoffAddress,omitempty"`
+	DropoffLat     *float64        `json:"dropoffLat,omitempty"`
+	DropoffLng     *float64        `json:"dropoffLng,omitempty"`
+	PackageInfo    *PackageInfo    `json:"packageInfo,omitempty"`
+}
+
+// UpdateExpressDeliveryRequest represents request for updating an express delivery
+type UpdateExpressDeliveryRequest struct {
+	Status      *DeliveryStatus `json:"status,omitempty"`
+	LivreurID   *string         `json:"livreurId,omitempty"`
+	WaitingMin  *float64        `json:"waitingMin,omitempty"`
+	FinalPrice  *float64        `json:"finalPrice,omitempty" validate:"omitempty,gte=0"`
+	Priority    *string         `json:"priority,omitempty"`
+	ExpressTime *int            `json:"expressTime,omitempty"`
+	PackageInfo *PackageInfo    `json:"packageInfo,omitempty"`
+}
+
+// UpdateGroupedDeliveryRequest represents request for updating a grouped delivery
+type UpdateGroupedDeliveryRequest struct {
+	Status         *DeliveryStatus `json:"status,omitempty"`
+	LivreurID      *string         `json:"livreurId,omitempty"`
+	WaitingMin     *float64        `json:"waitingMin,omitempty"`
+	FinalPrice     *float64        `json:"finalPrice,omitempty" validate:"omitempty,gte=0"`
+	CompletedZones *int            `json:"completedZones,omitempty"`
+	Zones          []GroupedZone   `json:"zones,omitempty"`
+}
+
+// UpdateMovingDeliveryRequest represents request for updating a moving delivery
+type UpdateMovingDeliveryRequest struct {
+	Status             *DeliveryStatus `json:"status,omitempty"`
+	LivreurID          *string         `json:"livreurId,omitempty"`
+	WaitingMin         *float64        `json:"waitingMin,omitempty"`
+	FinalPrice         *float64        `json:"finalPrice,omitempty" validate:"omitempty,gte=0"`
+	HelpersCount       *int            `json:"helpersCount,omitempty"`
+	Items              []MovingItem    `json:"items,omitempty"`
+	HelpersAssigned    *int            `json:"helpersAssigned,omitempty"`
+	EstimatedDuration  *int            `json:"estimatedDuration,omitempty"`
+}
+
+// StatusUpdateRequest represents request for updating delivery status
+type StatusUpdateRequest struct {
+	DeliveryID string         `json:"deliveryId" validate:"required"`
+	Status     DeliveryStatus `json:"status" validate:"required"`
+	Note       *string        `json:"note,omitempty"`
+	Notes      *string        `json:"notes,omitempty"` // Alias pour Notes
+	Location   *Location      `json:"location,omitempty"`
+}
+
+// MovingItem represents an item in a moving delivery
+type MovingItem struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name" validate:"required"`
+	Description *string `json:"description,omitempty"`
+	Quantity    int     `json:"quantity" validate:"gte=1"`
+	Weight      *float64 `json:"weight,omitempty"`
+	Fragile     bool    `json:"fragile"`
+	Room        *string `json:"room,omitempty"`
 }
 
 // Package represents a package
@@ -331,6 +398,31 @@ func (d *Delivery) GetExpectedDuration() int {
 	default:
 		return 60
 	}
+}
+
+// CanTransitionTo checks if delivery can transition to the given status
+func (d *Delivery) CanTransitionTo(newStatus DeliveryStatus) bool {
+	validTransitions := map[DeliveryStatus][]DeliveryStatus{
+		DeliveryStatusPending:   {DeliveryStatusAssigned, DeliveryStatusCancelled},
+		DeliveryStatusAssigned:  {DeliveryStatusInProgress, DeliveryStatusPickedUp, DeliveryStatusCancelled},
+		DeliveryStatusPickedUp:  {DeliveryStatusInTransit, DeliveryStatusCancelled},
+		DeliveryStatusInTransit: {DeliveryStatusDelivered, DeliveryStatusCancelled},
+		DeliveryStatusInProgress: {DeliveryStatusDelivered, DeliveryStatusCancelled},
+		DeliveryStatusDelivered: {}, // État final
+		DeliveryStatusCancelled: {}, // État final
+	}
+
+	allowedStatuses, exists := validTransitions[d.Status]
+	if !exists {
+		return false
+	}
+
+	for _, allowedStatus := range allowedStatuses {
+		if allowedStatus == newStatus {
+			return true
+		}
+	}
+	return false
 }
 
 // ToResponse converts Delivery to DeliveryResponse

@@ -306,3 +306,92 @@ func (rs *RealtimeService) StartCleanupRoutine() {
 		}
 	}()
 }
+
+// === SUPPORT METHODS ===
+
+// PublishSupportTicketUpdate publie une mise à jour de ticket
+func (rs *RealtimeService) PublishSupportTicketUpdate(ticketID string, update interface{}) error {
+	channel := fmt.Sprintf("support:ticket:%s", ticketID)
+
+	data, err := json.Marshal(update)
+	if err != nil {
+		return fmt.Errorf("erreur sérialisation ticket update: %v", err)
+	}
+
+	return rs.redisClient.Publish(rs.Ctx, channel, string(data)).Err()
+}
+
+// PublishSupportMessage publie un message de support
+func (rs *RealtimeService) PublishSupportMessage(conversationID string, message interface{}) error {
+	channel := fmt.Sprintf("support:ticket:%s", conversationID)
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("erreur sérialisation support message: %v", err)
+	}
+
+	return rs.redisClient.Publish(rs.Ctx, channel, string(data)).Err()
+}
+
+// PublishInternalGroupMessage publie un message de groupe interne
+func (rs *RealtimeService) PublishInternalGroupMessage(groupID string, message interface{}) error {
+	channel := fmt.Sprintf("internal:group:%s", groupID)
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("erreur sérialisation group message: %v", err)
+	}
+
+	return rs.redisClient.Publish(rs.Ctx, channel, string(data)).Err()
+}
+
+// PublishMessage publie un message sur un canal spécifique
+func (rs *RealtimeService) PublishMessage(channel string, message interface{}) error {
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("erreur sérialisation message: %v", err)
+	}
+
+	return rs.redisClient.Publish(rs.Ctx, channel, string(data)).Err()
+}
+
+// BroadcastToStaff diffuse un message à tout le staff
+func (rs *RealtimeService) BroadcastToStaff(event models.SSEEvent) error {
+	channel := "broadcast:staff"
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("erreur sérialisation staff event: %v", err)
+	}
+
+	return rs.redisClient.Publish(rs.Ctx, channel, string(data)).Err()
+}
+
+// SubscribeToSupportTicket s'abonne aux mises à jour d'un ticket
+func (rs *RealtimeService) SubscribeToSupportTicket(ticketID string) *redis.PubSub {
+	channel := fmt.Sprintf("support:ticket:%s", ticketID)
+	return rs.redisClient.Subscribe(rs.Ctx, channel)
+}
+
+// SubscribeToInternalGroup s'abonne aux messages d'un groupe interne
+func (rs *RealtimeService) SubscribeToInternalGroup(groupID string) *redis.PubSub {
+	channel := fmt.Sprintf("internal:group:%s", groupID)
+	return rs.redisClient.Subscribe(rs.Ctx, channel)
+}
+
+// SubscribeToStaffBroadcast s'abonne au canal broadcast staff
+func (rs *RealtimeService) SubscribeToStaffBroadcast() *redis.PubSub {
+	return rs.redisClient.Subscribe(rs.Ctx, "broadcast:staff")
+}
+
+// NotifyDirectContact notifie un contact direct admin->user
+func (rs *RealtimeService) NotifyDirectContact(adminID, userID string, message interface{}) error {
+	channel := fmt.Sprintf("direct:admin:%s:user:%s", adminID, userID)
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("erreur sérialisation direct contact: %v", err)
+	}
+
+	return rs.redisClient.Publish(rs.Ctx, channel, string(data)).Err()
+}

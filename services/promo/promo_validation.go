@@ -1,13 +1,14 @@
 package promo
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/ambroise1219/livraison_go/config"
 	"github.com/ambroise1219/livraison_go/db"
 	"github.com/ambroise1219/livraison_go/models"
+	prismadb "github.com/ambroise1219/livraison_go/prisma/db"
 )
 
 // PromoValidationService gère la validation et l'application des codes promotionnels
@@ -217,12 +218,8 @@ func (s *PromoValidationService) savePromoUsage(usage *models.PromoUsage) error 
 	ctx := context.Background()
 	
 	_, err := db.PrismaDB.PromoUsage.CreateOne(
-		prismadb.PromoUsage.ID.Set(usage.ID),
-		prismadb.PromoUsage.UserID.Set(usage.UserID),
-		prismadb.PromoUsage.PromoID.Set(usage.PromoID),
-		prismadb.PromoUsage.Amount.Set(usage.Amount),
-		prismadb.PromoUsage.Discount.Set(usage.Discount),
-		prismadb.PromoUsage.UsedAt.Set(usage.UsedAt),
+		prismadb.PromoUsage.Promo.Link(prismadb.Promo.ID.Equals(usage.PromoID)),
+		prismadb.PromoUsage.User.Link(prismadb.User.ID.Equals(usage.UserID)),
 	).Exec(ctx)
 	
 	return err
@@ -241,10 +238,7 @@ func (s *PromoValidationService) incrementPromoUsage(promoID string) error {
 	}
 	
 	// Calculer le nouveau compteur
-	currentCount := 0
-	if count, ok := promo.UsageCount(); ok {
-		currentCount = count
-	}
+	currentCount := promo.UsageCount
 	newCount := currentCount + 1
 	
 	// Mettre à jour
@@ -265,8 +259,8 @@ func (s *PromoValidationService) convertPrismaPromoToModel(prismaPromo *prismadb
 		Code:      prismaPromo.Code,
 		Type:      models.PromoType(prismaPromo.Type),
 		Value:     prismaPromo.Value,
-		StartDate: prismaPromo.StartDate,
-		EndDate:   prismaPromo.EndDate,
+		StartDate: prismaPromo.ValidFrom,
+		EndDate:   prismaPromo.ValidUntil,
 		IsActive:  prismaPromo.IsActive,
 		CreatedAt: prismaPromo.CreatedAt,
 		UpdatedAt: prismaPromo.UpdatedAt,
@@ -282,9 +276,7 @@ func (s *PromoValidationService) convertPrismaPromoToModel(prismaPromo *prismadb
 	if maxUsage, ok := prismaPromo.MaxUsage(); ok {
 		promo.MaxUsage = &maxUsage
 	}
-	if usageCount, ok := prismaPromo.UsageCount(); ok {
-		promo.UsageCount = &usageCount
-	}
+	promo.UsageCount = &prismaPromo.UsageCount
 	
 	return promo
 }
