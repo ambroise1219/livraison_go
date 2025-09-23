@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 
 	"context"
 
@@ -74,9 +76,17 @@ type Config struct {
 var AppConfig *Config
 
 func LoadConfig() *Config {
-	// Load .env file if exists
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using environment variables")
+	// Load .env file if exists (try current and parent dirs so tests from subpackages find it)
+	if err := godotenv.Load(".env", "../.env", "../../.env"); err != nil {
+		log.Println("No .env file found in relative paths, using environment variables")
+	}
+	// Fallback absolu basé sur l'emplacement de ce fichier (utile pendant go test)
+	if os.Getenv("DATABASE_URL") == "" {
+		if _, file, _, ok := runtime.Caller(0); ok {
+			repoRoot := filepath.Clean(filepath.Join(filepath.Dir(file), ".."))
+			absEnv := filepath.Join(repoRoot, ".env")
+			_ = godotenv.Load(absEnv)
+		}
 	}
 
 	config := &Config{
@@ -136,7 +146,7 @@ func LoadConfig() *Config {
 		CloudinaryCloudName: getEnv("CLOUDINARY_CLOUD_NAME", ""),
 		CloudinaryAPIKey:    getEnv("CLOUDINARY_API_KEY", ""),
 		CloudinaryAPISecret: getEnv("CLOUDINARY_API_SECRET", ""),
-		CloudinaryFolder:    getEnv("CLOUDINARY_FOLDER", "ilex/profiles"),
+		CloudinaryFolder:    getEnv("CLOUDINARY_FOLDER", "photo_profil_livraison"),
 	}
 
 	AppConfig = config

@@ -11,24 +11,25 @@ import (
 
 // Uploader définit l'interface d'upload de fichiers
 type Uploader interface {
+	// Legacy: upload photo de profil (conserve pour compat)
 	UploadProfilePicture(ctx context.Context, file any, filename string) (publicID string, url string, err error)
+	// Générique: uploader vers un sous-dossier précis (recommandé)
+	UploadToFolder(ctx context.Context, file any, folder string, publicID string) (publicIDOut string, url string, err error)
 }
 
 type cloudinaryUploader struct {
-	cld    *cloudinary.Cloudinary
-	folder string
+	cld        *cloudinary.Cloudinary
+	baseFolder string
+	preset     string
 }
 
 // NewCloudinaryUploader crée un uploader Cloudinary
 func NewCloudinaryUploader() (Uploader, error) {
 	cfg := config.GetConfig()
 
-	// Pour un preset UNSIGNED, on n'a besoin que du cloud name
 	if cfg.CloudinaryCloudName == "" {
 		return nil, fmt.Errorf("configuration Cloudinary manquante: CLOUDINARY_CLOUD_NAME requis")
 	}
-
-	// Pour un preset UNSIGNED, on utilise quand même l'API key/secret (limitation SDK Go)
 	if cfg.CloudinaryAPIKey == "" || cfg.CloudinaryAPISecret == "" {
 		return nil, fmt.Errorf("configuration Cloudinary manquante: CLOUDINARY_API_KEY et CLOUDINARY_API_SECRET requis")
 	}
@@ -38,18 +39,36 @@ func NewCloudinaryUploader() (Uploader, error) {
 		return nil, fmt.Errorf("init cloudinary: %w", err)
 	}
 
-	fmt.Printf("✅ CLOUDINARY INIT: cloud_name=%s, preset=photo_profil_livraison\n", cfg.CloudinaryCloudName)
-	return &cloudinaryUploader{cld: cld, folder: cfg.CloudinaryFolder}, nil
+	preset := "photo_profil_livraison" // preset demandé
+	base := cfg.CloudinaryFolder
+	if base == "" {
+		base = "photo_profil_livraison"
+	}
+	fmt.Printf("✅ CLOUDINARY INIT: cloud_name=%s, preset=%s, base_folder=%s\n", cfg.CloudinaryCloudName, preset, base)
+	return &cloudinaryUploader{cld: cld, baseFolder: base, preset: preset}, nil
 }
 
+// UploadProfilePicture conserve une compatabilité, en déléguant vers UploadToFolder
 func (u *cloudinaryUploader) UploadProfilePicture(ctx context.Context, file any, filename string) (string, string, error) {
+	// Dossier par défaut pour compatibilité (photo_profil sous baseFolder)
+	folder := fmt.Sprintf("%s/%s", u.baseFolder, "photo_profil")
+	return u.UploadToFolder(ctx, file, folder, filename)
+}
+
+// UploadToFolder envoie un fichier dans un sous-dossier donné, avec le preset configuré
+func (u *cloudinaryUploader) UploadToFolder(ctx context.Context, file any, folder string, publicID string) (string, string, error) {
+	// Pour un preset unsigned imposant un dossier (asset folder), on encode le sous-dossier dans le public_id
+	fullPublicID := publicID
+	if folder != "" {
+		fullPublicID = fmt.Sprintf("%s/%s", folder, publicID)
+	}
 	params := uploader.UploadParams{
-		UploadPreset: "photo_profil_livraison",
-		// Pas de PublicID pour preset UNSIGNED - Cloudinary le génère automatiquement
-		ResourceType: "auto",
+		UploadPreset:  u.preset,
+		PublicID:     fullPublicID,
+		ResourceType: "image",
 	}
 
-	fmt.Printf("🔍 CLOUDINARY DEBUG: Uploading file=%v, filename=%s, preset=photo_profil_livraison\n", file, filename)
+	fmt.Printf("🔍 CLOUDINARY DEBUG: Uploading file=%v, folder=%s, publicID=%s, preset=%s\n", file, folder, publicID, u.preset)
 
 	res, err := u.cld.Upload.Upload(ctx, file, params)
 	if err != nil {
@@ -57,14 +76,8 @@ func (u *cloudinaryUploader) UploadProfilePicture(ctx context.Context, file any,
 		return "", "", fmt.Errorf("cloudinary upload error: %w", err)
 	}
 
-	fmt.Printf("✅ CLOUDINARY RESPONSE: res=%+v\n", res)
-	if res != nil {
-		fmt.Printf("📊 CLOUDINARY DETAILS: PublicID=%s, SecureURL=%s, URL=%s\n", res.PublicID, res.SecureURL, res.URL)
-	}
-
-	// Vérifier si Cloudinary a renvoyé une erreur applicative
 	if res == nil || (res.SecureURL == "" && res.URL == "") {
-		return res.PublicID, res.SecureURL, fmt.Errorf("cloudinary empty response: publicId=%s url=%s", res.PublicID, res.SecureURL)
+		return "", "", fmt.Errorf("cloudinary empty response")
 	}
 	url := res.SecureURL
 	if url == "" {

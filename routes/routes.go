@@ -119,6 +119,9 @@ func setupProtectedRoutes(rg *gin.RouterGroup) {
 	// Routes de livraison
 	setupDeliveryRoutes(protected)
 
+	// Routes véhicule générales (images)
+	protected.GET("/vehicles/:vehicle_id/images", handlers.GetVehicleImages)
+
 	// Routes de promotion
 	setupPromoRoutes(protected)
 
@@ -145,6 +148,13 @@ func setupAuthRoutes(rg *gin.RouterGroup) {
 
 		// Upload photo de profil (multipart/form-data, champ: file)
 		auth.POST("/profile/picture", handlers.UploadProfilePicture)
+		// Uploads Cloudinary
+		auth.POST("/profile/document", handlers.UploadClientDocument)
+		auth.POST("/driver/document", middlewares.RequireDriver(), handlers.UploadDriverDocument)
+		auth.POST("/driver/vehicle/images", middlewares.RequireDriver(), handlers.UploadDriverVehicleImages)
+		// Listing documents
+		auth.GET("/documents", handlers.ListUserDocuments)
+
 		auth.GET("/test/cloudinary", handlers.TestCloudinaryUploader)
 	}
 }
@@ -283,7 +293,11 @@ func setupAdminRoutes(rg *gin.RouterGroup) {
 		{
 			vehicles.GET("/", handlers.GetAllVehicles)
 			vehicles.PUT("/:vehicle_id/verify", handlers.VerifyVehicle)
+			vehicles.GET("/:vehicle_id/images", handlers.GetVehicleImages)
 		}
+
+		// Documents (admin)
+		admin.GET("/documents", handlers.ListAllDocuments)
 
 		// Statistiques générales
 		stats := admin.Group("/stats")

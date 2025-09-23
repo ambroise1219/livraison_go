@@ -2,13 +2,12 @@ package handlers
 
 import (
 	"fmt"
-	"io"
 	"math"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
+	"context"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -23,8 +22,11 @@ import (
 	"github.com/ambroise1219/livraison_go/services/promo"
 	"github.com/ambroise1219/livraison_go/services/storage"
 	"github.com/ambroise1219/livraison_go/services/support"
+	"github.com/ambroise1219/livraison_go/services/upload"
 	"github.com/ambroise1219/livraison_go/services/validation"
 	"github.com/ambroise1219/livraison_go/services/vehicle"
+	prismadb "github.com/ambroise1219/livraison_go/prisma/db"
+	"github.com/ambroise1219/livraison_go/db"
 )
 
 // Global validator instance
@@ -54,6 +56,7 @@ var supportService support.SupportService
 
 // Storage uploader (Cloudinary)
 var uploader storage.Uploader
+var uploadService *upload.Service
 
 // InitHandlers initializes handlers with dependencies
 func InitHandlers() {
@@ -95,6 +98,7 @@ func InitHandlers() {
 	} else {
 		logrus.Info("✅ Uploader Cloudinary initialisé avec succès")
 		logrus.Info("✅ CLOUDINARY INIT SUCCESS")
+		uploadService = upload.NewService(uploader)
 	}
 }
 
@@ -130,130 +134,32 @@ func TestCloudinaryUploader(c *gin.Context) {
 // @Failure 502 {object} models.ErrorResponse "Erreur Cloudinary"
 // @Router /auth/profile/picture [post]
 func UploadProfilePicture(c *gin.Context) {
-	// Auth requis
 	userClaims, exists := middlewares.GetCurrentUser(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Utilisateur non authentifié"})
 		return
 	}
-
-	if uploader == nil {
-		logrus.Error("❌ Uploader Cloudinary est nil dans UploadProfilePicture")
+	if uploadService == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Service d'upload indisponible"})
 		return
 	}
 
-	logrus.Info("✅ Uploader Cloudinary disponible, début de l'upload...")
-
-	// Récupérer le fichier
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Fichier manquant (champ 'file')", "details": err.Error()})
 		return
 	}
 
-	// Valider la taille (<= 10 Mo)
-	const maxImageSize = 10 * 1024 * 1024 // 10MB
-	if fileHeader.Size <= 0 || fileHeader.Size > maxImageSize {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Taille de fichier invalide (max 10MB)"})
-		return
-	}
-
-	// Ouvrir le fichier
-	file, err := fileHeader.Open()
+	publicID, url, err := uploadService.UploadProfilePicture(c.Request.Context(), userClaims.Role, userClaims.UserID, fileHeader)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Impossible de lire le fichier", "details": err.Error()})
-		return
-	}
-	defer file.Close()
-
-	// Déterminer le type MIME de manière fiable
-	// 1) Essayer l'en-tête Content-Type
-	contentType := fileHeader.Header.Get("Content-Type")
-	// 2) Sniffer les premiers bytes
-	var sniff [512]byte
-	n, _ := file.Read(sniff[:])
-	if n > 0 {
-		detected := http.DetectContentType(sniff[:n])
-		if detected != "application/octet-stream" {
-			contentType = detected
-		}
-	}
-	// Revenir au début pour l'upload Cloudinary
-	if seeker, ok := file.(io.Seeker); ok {
-		_, _ = seeker.Seek(0, io.SeekStart)
-	}
-
-	// Liste blanche de types d'images supportés
-	allowed := map[string]bool{
-		"image/jpeg": true,
-		"image/jpg":  true,
-		"image/png":  true,
-		"image/webp": true,
-		"image/avif": true,
-		"image/gif":  true,
-		"image/bmp":  true,
-		"image/tiff": true,
-		"image/heic": true,
-		"image/heif": true,
-	}
-	if !allowed[strings.ToLower(contentType)] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Type de fichier non pris en charge", "contentType": contentType})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Échec de l'upload", "details": err.Error()})
 		return
 	}
 
-	// Construire un nom public
-	publicName := fmt.Sprintf("user_%s_%d", userClaims.UserID, time.Now().Unix())
-
-	// Écrire dans un fichier temporaire et uploader via chemin (plus robuste avec Cloudinary SDK)
-	tmpFile, err := os.CreateTemp("", "upload-*.bin")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Échec création fichier temporaire", "details": err.Error()})
-		return
-	}
-	defer func() {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
-	}()
-
-	if _, err := io.Copy(tmpFile, file); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Échec écriture fichier temporaire", "details": err.Error()})
-		return
-	}
-
-	// Revenir au début du fichier temp par sécurité
-	if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
-		// on continue quand même, on passera le chemin
-	}
-
-	// Upload vers Cloudinary en passant le chemin de fichier
-	publicID, url, err := uploader.UploadProfilePicture(c, tmpFile.Name(), publicName)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Échec de l'upload", "details": err.Error()})
-		return
-	}
-
-	// Vérification stricte de la réponse Cloudinary
-	if publicID == "" || url == "" {
-		logrus.WithFields(logrus.Fields{
-			"publicId": publicID,
-			"url":      url,
-			"ctype":    contentType,
-			"size":     fileHeader.Size,
-		}).Warn("Cloudinary a renvoyé une réponse vide (publicId/url)")
-		c.JSON(http.StatusBadGateway, gin.H{
-			"error":   "Upload image non abouti",
-			"details": "Cloudinary n'a pas retourné d'URL",
-		})
-		return
-	}
-
-	// Mettre à jour le profil utilisateur avec l'URL (stockée dans profilePictureId)
 	if err := userService.UpdateUserProfilePicture(userClaims.UserID, url); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Échec de la mise à jour du profil", "details": err.Error()})
 		return
 	}
-	// Renvoyer le profil mis à jour avec l'URL exacte (récupération par ID)
 	updatedUser, _ := userService.GetUserByID(userClaims.UserID)
 	c.JSON(http.StatusOK, gin.H{
 		"message":           "Photo de profil mise à jour",
@@ -262,6 +168,253 @@ func UploadProfilePicture(c *gin.Context) {
 		"user":              updatedUser,
 		"profilePictureUrl": url,
 	})
+}
+
+// Upload d'un document client (générique)
+func UploadClientDocument(c *gin.Context) {
+	userClaims, exists := middlewares.GetCurrentUser(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Utilisateur non authentifié"})
+		return
+	}
+	if uploadService == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Service d'upload indisponible"})
+		return
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Fichier manquant (champ 'file')", "details": err.Error()})
+		return
+	}
+	publicID, url, err := uploadService.UploadClientDocument(c.Request.Context(), userClaims.UserID, fileHeader)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Échec upload Cloudinary", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "Document client uploadé",
+		"publicId": publicID,
+		"url":     url,
+	})
+}
+
+// Upload d'un document livreur avec type (cni/carte_grise/permis) et côté (recto/verso)
+func UploadDriverDocument(c *gin.Context) {
+	userClaims, exists := middlewares.GetCurrentUser(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Utilisateur non authentifié"})
+		return
+	}
+	if userClaims.Role != models.UserRoleLivreur {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Réservé aux livreurs"})
+		return
+	}
+	if uploadService == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Service d'upload indisponible"})
+		return
+	}
+	docType := c.PostForm("type")
+	side := c.PostForm("side")
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Fichier manquant (champ 'file')", "details": err.Error()})
+		return
+	}
+	publicID, url, err := uploadService.UploadDriverDocument(c.Request.Context(), userClaims.UserID, docType, side, fileHeader)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Échec upload Cloudinary", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "Document livreur uploadé",
+		"publicId": publicID,
+		"url":     url,
+		"type":    strings.ToLower(docType),
+		"side":    strings.ToLower(side),
+	})
+}
+
+// Upload de plusieurs images de véhicule (max 4)
+func UploadDriverVehicleImages(c *gin.Context) {
+	userClaims, exists := middlewares.GetCurrentUser(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Utilisateur non authentifié"})
+		return
+	}
+	if userClaims.Role != models.UserRoleLivreur {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Réservé aux livreurs"})
+		return
+	}
+	if uploadService == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Service d'upload indisponible"})
+		return
+	}
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "FormData invalide", "details": err.Error()})
+		return
+	}
+	files := form.File["files"]
+	vehicleID := c.PostForm("vehicleId")
+	results, err := uploadService.UploadDriverVehicleImages(c.Request.Context(), userClaims.UserID, files)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Échec upload Cloudinary", "details": err.Error()})
+		return
+	}
+
+	// Optionnel: lier aux véhicules si vehicleId fourni
+	if vehicleID != "" {
+		ctx := context.Background()
+		for _, r := range results {
+			// retrouver le fileId via publicId (filename)
+			f, err := db.PrismaDB.File.FindFirst(prismadb.File.Filename.Equals(r.PublicID)).Exec(ctx)
+			if err == nil {
+				_, _ = db.PrismaDB.VehicleImage.CreateOne(
+					prismadb.VehicleImage.File.Link(prismadb.File.ID.Equals(f.ID)),
+					prismadb.VehicleImage.User.Link(prismadb.User.ID.Equals(userClaims.UserID)),
+					prismadb.VehicleImage.Vehicle.Link(prismadb.Vehicle.ID.Equals(vehicleID)),
+				).Exec(ctx)
+			}
+		}
+	}
+
+	items := make([]gin.H, 0, len(results))
+	for _, r := range results {
+		items = append(items, gin.H{"index": r.Index, "publicId": r.PublicID, "url": r.URL})
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Images de véhicule uploadées",
+		"count":   len(items),
+		"items":   items,
+	})
+}
+
+// ListUserDocuments liste les fichiers d'un utilisateur avec filtre par type
+func ListUserDocuments(c *gin.Context) {
+	userClaims, ok := middlewares.GetCurrentUser(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Utilisateur non authentifié"})
+		return
+	}
+	typeParam := strings.ToLower(c.Query("type"))
+	ctx := context.Background()
+	conditions := []prismadb.FileWhereParam{
+		prismadb.File.User.Where(prismadb.User.ID.Equals(userClaims.UserID)),
+	}
+	switch typeParam {
+	case "profile":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryProfile))
+	case "client":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryClientDoc))
+	case "driver_cni":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryDriverCni))
+	case "driver_permis":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryDriverPermis))
+	case "driver_carte_grise":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryDriverCarteGrise))
+	case "vehicle":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryVehicleImage))
+	}
+	files, err := db.PrismaDB.File.FindMany(conditions...).OrderBy(prismadb.File.CreatedAt.Order(prismadb.SortOrderDesc)).Exec(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	resp := make([]gin.H, 0, len(files))
+	for _, f := range files {
+		resp = append(resp, gin.H{
+			"id": f.ID,
+			"filename": f.Filename,
+			"originalName": f.OriginalName,
+			"mimeType": f.MimeType,
+			"size": f.Size,
+			"url": f.Path,
+			"createdAt": f.CreatedAt,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"items": resp, "count": len(resp)})
+}
+
+// ListAllDocuments (ADMIN) liste les fichiers de tous les utilisateurs, filtrables par type et userId
+func ListAllDocuments(c *gin.Context) {
+	// Sécurité: cette route doit être protégée par RequireAdmin() dans routes.go
+	typeParam := strings.ToLower(c.Query("type"))
+	userID := c.Query("userId")
+	ctx := context.Background()
+	conditions := []prismadb.FileWhereParam{}
+	if userID != "" {
+		conditions = append(conditions, prismadb.File.User.Where(prismadb.User.ID.Equals(userID)))
+	}
+	switch typeParam {
+	case "profile":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryProfile))
+	case "client":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryClientDoc))
+	case "driver_cni":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryDriverCni))
+	case "driver_permis":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryDriverPermis))
+	case "driver_carte_grise":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryDriverCarteGrise))
+	case "vehicle":
+conditions = append(conditions, prismadb.File.Category.Equals(prismadb.FileCategoryVehicleImage))
+	}
+	files, err := db.PrismaDB.File.FindMany(conditions...).OrderBy(prismadb.File.CreatedAt.Order(prismadb.SortOrderDesc)).Exec(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	resp := make([]gin.H, 0, len(files))
+	for _, f := range files {
+		resp = append(resp, gin.H{
+			"id": f.ID,
+"userId": f.UserID,
+			"filename": f.Filename,
+			"originalName": f.OriginalName,
+			"mimeType": f.MimeType,
+			"size": f.Size,
+			"url": f.Path,
+			"createdAt": f.CreatedAt,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"items": resp, "count": len(resp)})
+}
+
+// GetVehicleImages liste les images liées à un véhicule
+func GetVehicleImages(c *gin.Context) {
+	vehicleID := c.Param("vehicle_id")
+	if vehicleID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "vehicle_id requis"})
+		return
+	}
+	ctx := context.Background()
+	userClaims, _ := middlewares.GetCurrentUser(c)
+	isAdmin := false
+	if role, ok := middlewares.GetCurrentUserRole(c); ok && (role == models.UserRoleAdmin || role == models.UserRoleGestionnaire) {
+		isAdmin = true
+	}
+	conds := []prismadb.VehicleImageWhereParam{
+		prismadb.VehicleImage.VehicleID.Equals(vehicleID),
+	}
+	if !isAdmin {
+		conds = append(conds, prismadb.VehicleImage.UserID.Equals(userClaims.UserID))
+	}
+	links, err := db.PrismaDB.VehicleImage.FindMany(conds...).OrderBy(prismadb.VehicleImage.CreatedAt.Order(prismadb.SortOrderDesc)).Exec(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	items := make([]gin.H, 0, len(links))
+	for _, li := range links {
+		f, err := db.PrismaDB.File.FindUnique(prismadb.File.ID.Equals(li.FileID)).Exec(ctx)
+		if err == nil {
+			items = append(items, gin.H{"fileId": f.ID, "url": f.Path, "createdAt": li.CreatedAt})
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"items": items, "count": len(items)})
 }
 
 // Auth handlers

@@ -13,7 +13,7 @@
           "request": {
             "method": "GET",
             "header": [{"key": "Authorization", "value": "Bearer {{DRIVER_TOKEN}}"}],
-            "url": {"raw": "{{BASE_URL}}/api/deliveries/available", "host": ["{{BASE_URL}}"], "path": ["api", "deliveries", "available"]}
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/driver/available", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "driver", "available"]}
           }
         },
         {
@@ -21,7 +21,7 @@
           "request": {
             "method": "POST",
             "header": [{"key": "Authorization", "value": "Bearer {{DRIVER_TOKEN}}"}],
-            "url": {"raw": "{{BASE_URL}}/api/deliveries/{{DELIVERY_ID}}/accept", "host": ["{{BASE_URL}}"], "path": ["api", "deliveries", "{{DELIVERY_ID}}", "accept"]}
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/driver/{{DELIVERY_ID}}/accept", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "driver", "{{DELIVERY_ID}}", "accept"]}
           }
         }
       ]
@@ -32,13 +32,13 @@
         {
           "name": "Update Driver Location",
           "request": {
-            "method": "PUT",
-            "header": [
-              {"key": "Authorization", "value": "Bearer {{DRIVER_TOKEN}}"},
-              {"key": "Content-Type", "value": "application/json"}
-            ],
-            "url": {"raw": "{{BASE_URL}}/api/drivers/location", "host": ["{{BASE_URL}}"], "path": ["api", "drivers", "location"]},
-            "body": {"mode": "raw", "raw": "{\n  \"lat\": 5.318000,\n  \"lng\": -4.031500,\n  \"isAvailable\": true\n}"}
+          "method": "POST",
+          "header": [
+            {"key": "Authorization", "value": "Bearer {{DRIVER_TOKEN}}"},
+            {"key": "Content-Type", "value": "application/json"}
+          ],
+          "url": {"raw": "{{BASE_URL}}/api/v1/delivery/driver/{{DELIVERY_ID}}/location", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "driver", "{{DELIVERY_ID}}", "location"]},
+          "body": {"mode": "raw", "raw": "{\n  \"latitude\": 5.3599,\n  \"longitude\": -4.0083,\n  \"accuracy\": 10.5\n}"}
           }
         }
       ]

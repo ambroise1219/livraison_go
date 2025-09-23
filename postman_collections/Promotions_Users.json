@@ -5,7 +5,7 @@
     "description": "Collection pour les promotions et gestion des utilisateurs"
   },
   "variable": [
-    {"key": "BASE_URL", "value": "172.187.248.156:3000"},
+    {"key": "BASE_URL", "value": "http://172.187.248.156:3000"},
     {"key": "ACCESS_TOKEN", "value": ""},
     {"key": "USER_ID", "value": ""},
     {"key": "VEHICLE_ID", "value": ""}

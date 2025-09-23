@@ -1,0 +1,116 @@
+{
+  "info": {
+    "_postman_id": "e9e9ab3e-2a0b-4e7a-9f66-2f1a0f4c3a1a",
+    "name": "ILEX Uploads",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Endpoints d'upload d'images (Cloudinary)"
+  },
+  "item": [
+    {
+      "name": "Upload photo profil",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/v1/auth/profile/picture",
+          "host": [ "{{BASE_URL}}" ],
+          "path": [ "api", "v1", "auth", "profile", "picture" ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "file", "type": "file", "src": [] }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upload document client",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/v1/auth/profile/document",
+          "host": [ "{{BASE_URL}}" ],
+          "path": [ "api", "v1", "auth", "profile", "document" ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "file", "type": "file", "src": [] }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upload document livreur (recto/verso)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/v1/auth/driver/document",
+          "host": [ "{{BASE_URL}}" ],
+          "path": [ "api", "v1", "auth", "driver", "document" ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "type", "type": "text", "value": "cni" },
+            { "key": "side", "type": "text", "value": "recto" },
+            { "key": "file", "type": "file", "src": [] }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upload images véhicule (max 4)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/v1/auth/driver/vehicle/images",
+          "host": [ "{{BASE_URL}}" ],
+          "path": [ "api", "v1", "auth", "driver", "vehicle", "images" ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "files", "type": "file", "src": [] },
+            { "key": "files", "type": "file", "src": [] },
+            { "key": "vehicleId", "type": "text", "value": "{{VEHICLE_ID}}" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Lister mes documents",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}" }
+        ],
+        "url": {
+          "raw": "{{BASE_URL}}/api/v1/auth/documents",
+          "host": [ "{{BASE_URL}}" ],
+          "path": [ "api", "v1", "auth", "documents" ],
+          "query": [
+            { "key": "category", "value": "" }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "BASE_URL", "value": "http://172.187.248.156:3000" },
+    { "key": "ACCESS_TOKEN", "value": "REPLACE_ME" },
+    { "key": "VEHICLE_ID", "value": "" }
+  ]
+}

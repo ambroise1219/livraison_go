@@ -1,3 +1,6 @@
+//go:build swagger
+// +build swagger
+
 package models
 
 // ErrorResponse représente une réponse d'erreur standard

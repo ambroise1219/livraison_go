@@ -4,7 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
+	"runtime"
 
+	"github.com/joho/godotenv"
 	"github.com/ambroise1219/livraison_go/prisma/db"
 )
 
@@ -12,6 +16,17 @@ var PrismaClient *db.PrismaClient
 
 // InitPrisma initialise la connexion Prisma
 func InitPrisma() error {
+	// Charger .env tôt pour Prisma (tests lancés depuis des sous-dossiers)
+	_ = godotenv.Load(".env", "../.env", "../../.env")
+	if os.Getenv("DATABASE_URL") == "" {
+		// Fallback: charger .env à partir de la racine du repo en se basant sur ce fichier
+		if _, file, _, ok := runtime.Caller(0); ok {
+			repoRoot := filepath.Clean(filepath.Join(filepath.Dir(file), ".."))
+			absEnv := filepath.Join(repoRoot, ".env")
+			_ = godotenv.Load(absEnv)
+		}
+	}
+
 	PrismaClient = db.NewClient()
 
 	if err := PrismaClient.Connect(); err != nil {

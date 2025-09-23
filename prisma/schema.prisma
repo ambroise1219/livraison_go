@@ -188,6 +188,7 @@ model User {
   files                 File[]
   promoUsages           PromoUsage[]  @relation("PromoUsage")
   subscriptions         Subscription[] @relation("Subscription")
+  vehicleImages         VehicleImage[]
   
   // Relations temps réel
   realtimeConnections   RealtimeConnection[] @relation("RealtimeConnection")
@@ -237,6 +238,7 @@ model Vehicle {
 
   // Relations
   deliveries Delivery[]
+  images     VehicleImage[]
 
   @@map("vehicles")
 }
@@ -540,13 +542,39 @@ model File {
   mimeType    String
   size        Int
   path        String
+  category    FileCategory
   createdAt   DateTime @default(now())
   
   // Relations
   user        User     @relation(fields: [userId], references: [id])
   userId      String
+  vehicleImages VehicleImage[]
 
   @@map("files")
+}
+
+enum FileCategory {
+  PROFILE
+  CLIENT_DOC
+  DRIVER_CNI
+  DRIVER_PERMIS
+  DRIVER_CARTE_GRISE
+  VEHICLE_IMAGE
+}
+
+model VehicleImage {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Relations
+  file      File     @relation(fields: [fileId], references: [id])
+  fileId    String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicleId String
+
+  @@map("vehicle_images")
 }
 
 model DeliveryZone {
