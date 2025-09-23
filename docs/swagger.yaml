@@ -1,0 +1,374 @@
+basePath: /api/v1
+definitions:
+  models.AuthResponse:
+    properties:
+      expiresAt:
+        type: string
+      refreshToken:
+        type: string
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/models.UserResponse'
+    type: object
+  models.DriverStatus:
+    enum:
+    - OFFLINE
+    - ONLINE
+    - BUSY
+    - AVAILABLE
+    type: string
+    x-enum-varnames:
+    - DriverStatusOffline
+    - DriverStatusOnline
+    - DriverStatusBusy
+    - DriverStatusAvailable
+  models.ErrorResponse:
+    properties:
+      details:
+        example: Détails supplémentaires
+        type: string
+      error:
+        example: Message d'erreur
+        type: string
+    type: object
+  models.OTPResponse:
+    properties:
+      expiresIn:
+        example: 5 minutes
+        type: string
+      message:
+        example: OTP sent successfully
+        type: string
+    type: object
+  models.ProfilePictureResponse:
+    properties:
+      message:
+        example: Photo de profil uploadée avec succès
+        type: string
+      profilePictureUrl:
+        example: https://res.cloudinary.com/livraison/image/upload/v1234567890/photo_profil_livraison/abc123.jpg
+        type: string
+      publicId:
+        example: photo_profil_livraison/abc123
+        type: string
+      url:
+        example: https://res.cloudinary.com/livraison/image/upload/v1234567890/photo_profil_livraison/abc123.jpg
+        type: string
+      user:
+        $ref: '#/definitions/models.User'
+    type: object
+  models.SendOTPRequest:
+    properties:
+      phone:
+        maxLength: 15
+        minLength: 8
+        type: string
+    required:
+    - phone
+    type: object
+  models.User:
+    properties:
+      address:
+        type: string
+      cni_recto:
+        type: string
+      cni_verso:
+        type: string
+      createdAt:
+        type: string
+      dateOfBirth:
+        type: string
+      driverStatus:
+        $ref: '#/definitions/models.DriverStatus'
+      email:
+        type: string
+      firstName:
+        type: string
+      id:
+        type: string
+      is_driver_complete:
+        type: boolean
+      is_driver_vehicule_complete:
+        type: boolean
+      is_profile_completed:
+        type: boolean
+      lastKnownLat:
+        maximum: 90
+        minimum: -90
+        type: number
+      lastKnownLng:
+        maximum: 180
+        minimum: -180
+        type: number
+      lastName:
+        type: string
+      lastSeenAt:
+        type: string
+      lieuResidence:
+        type: string
+      permis_recto:
+        type: string
+      permis_verso:
+        type: string
+      phone:
+        maxLength: 15
+        minLength: 8
+        type: string
+      profilePictureId:
+        type: string
+      referredById:
+        type: string
+      role:
+        $ref: '#/definitions/models.UserRole'
+      updatedAt:
+        type: string
+    required:
+    - id
+    - phone
+    - role
+    type: object
+  models.UserProfileResponse:
+    properties:
+      createdAt:
+        example: "2024-01-15T10:30:00Z"
+        type: string
+      email:
+        example: john.doe@example.com
+        type: string
+      firstName:
+        example: John
+        type: string
+      id:
+        example: user_123
+        type: string
+      isAdmin:
+        example: false
+        type: boolean
+      isDriver:
+        example: false
+        type: boolean
+      lastName:
+        example: Doe
+        type: string
+      phone:
+        example: "+2250173226070"
+        type: string
+      profilePictureUrl:
+        example: https://res.cloudinary.com/livraison/image/upload/v1234567890/photo_profil_livraison/abc123.jpg
+        type: string
+      updatedAt:
+        example: "2024-01-15T10:30:00Z"
+        type: string
+    type: object
+  models.UserResponse:
+    properties:
+      address:
+        type: string
+      createdAt:
+        type: string
+      dateOfBirth:
+        type: string
+      driverStatus:
+        $ref: '#/definitions/models.DriverStatus'
+      email:
+        type: string
+      firstName:
+        type: string
+      id:
+        type: string
+      is_driver_complete:
+        type: boolean
+      is_driver_vehicule_complete:
+        type: boolean
+      is_profile_completed:
+        type: boolean
+      lastKnownLat:
+        type: number
+      lastKnownLng:
+        type: number
+      lastName:
+        type: string
+      lastSeenAt:
+        type: string
+      lieuResidence:
+        type: string
+      phone:
+        type: string
+      profilePictureId:
+        type: string
+      referredById:
+        type: string
+      role:
+        $ref: '#/definitions/models.UserRole'
+      updatedAt:
+        type: string
+    type: object
+  models.UserRole:
+    enum:
+    - CLIENT
+    - LIVREUR
+    - ADMIN
+    - GESTIONNAIRE
+    - MARKETING
+    type: string
+    x-enum-varnames:
+    - UserRoleClient
+    - UserRoleLivreur
+    - UserRoleAdmin
+    - UserRoleGestionnaire
+    - UserRoleMarketing
+  models.VerifyOTPRequest:
+    properties:
+      code:
+        type: string
+      phone:
+        maxLength: 15
+        minLength: 8
+        type: string
+    required:
+    - code
+    - phone
+    type: object
+host: 127.0.0.1:3000
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API complète pour le système de livraison ILEX
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: ILEX Backend API
+  version: "1.0"
+paths:
+  /auth/profile:
+    get:
+      consumes:
+      - application/json
+      description: Récupère les informations du profil de l'utilisateur authentifié
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profil utilisateur
+          schema:
+            $ref: '#/definitions/models.UserProfileResponse'
+        "401":
+          description: Non authentifié
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Utilisateur non trouvé
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Récupérer le profil utilisateur
+      tags:
+      - User Profile
+  /auth/profile/picture:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload une image de profil vers Cloudinary et met à jour le profil
+        utilisateur
+      parameters:
+      - description: Image de profil (JPG, PNG, GIF, WEBP - max 10MB)
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Upload réussi
+          schema:
+            $ref: '#/definitions/models.ProfilePictureResponse'
+        "400":
+          description: Erreur de validation
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Non authentifié
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "502":
+          description: Erreur Cloudinary
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Uploader une photo de profil
+      tags:
+      - User Profile
+  /auth/send-otp:
+    post:
+      consumes:
+      - application/json
+      description: Envoie un code OTP par WhatsApp pour l'authentification
+      parameters:
+      - description: Données de la requête OTP
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SendOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Code OTP envoyé avec succès
+          schema:
+            $ref: '#/definitions/models.OTPResponse'
+        "400":
+          description: Erreur de validation
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Erreur serveur
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Envoyer un code OTP
+      tags:
+      - Authentication
+  /auth/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: Vérifie le code OTP et retourne un token JWT si valide
+      parameters:
+      - description: Code OTP à vérifier
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.VerifyOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Authentification réussie
+          schema:
+            $ref: '#/definitions/models.AuthResponse'
+        "400":
+          description: Code OTP invalide
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Erreur serveur
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Vérifier un code OTP
+      tags:
+      - Authentication
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

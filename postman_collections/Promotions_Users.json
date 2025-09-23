@@ -1,0 +1,137 @@
+{
+  "info": {
+    "name": "ILEX Promotions & Users",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection pour les promotions et gestion des utilisateurs"
+  },
+  "variable": [
+    {"key": "BASE_URL", "value": "172.187.248.156:3000"},
+    {"key": "ACCESS_TOKEN", "value": ""},
+    {"key": "USER_ID", "value": ""},
+    {"key": "VEHICLE_ID", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "🎁 Promotions",
+      "item": [
+        {
+          "name": "Validate Promo Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/promo/validate", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "promo", "validate"]},
+            "body": {"mode": "raw", "raw": "{\n  \"code\": \"WELCOME10\",\n  \"orderAmount\": 10000\n}"}
+          }
+        },
+        {
+          "name": "Use Promo Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/promo/use", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "promo", "use"]},
+            "body": {"mode": "raw", "raw": "{\n  \"code\": \"WELCOME10\",\n  \"deliveryId\": \"{{DELIVERY_ID}}\"\n}"}
+          }
+        },
+        {
+          "name": "Get Promo History",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/promo/history", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "promo", "history"]}
+          }
+        },
+        {
+          "name": "Create Referral",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/promo/referral/create", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "promo", "referral", "create"]},
+            "body": {"mode": "raw", "raw": "{\n  \"referredPhone\": \"+2250701234567\"\n}"}
+          }
+        },
+        {
+          "name": "Get Referral Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/promo/referral/stats", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "promo", "referral", "stats"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 User Management",
+      "item": [
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/users/{{USER_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "users", "{{USER_ID}}"]}
+          }
+        },
+        {
+          "name": "Update User Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/users/{{USER_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "users", "{{USER_ID}}"]},
+            "body": {"mode": "raw", "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\"\n}"}
+          }
+        },
+        {
+          "name": "Get User Deliveries",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/users/{{USER_ID}}/deliveries", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "users", "{{USER_ID}}", "deliveries"]}
+          }
+        },
+        {
+          "name": "Get User Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/users/{{USER_ID}}/vehicles", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "users", "{{USER_ID}}", "vehicles"]}
+          }
+        },
+        {
+          "name": "Create Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/users/{{USER_ID}}/vehicles", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "users", "{{USER_ID}}", "vehicles"]},
+            "body": {"mode": "raw", "raw": "{\n  \"type\": \"MOTORCYCLE\",\n  \"brand\": \"Honda\",\n  \"model\": \"CBR150R\",\n  \"year\": 2023,\n  \"licensePlate\": \"AB-123-CD\",\n  \"color\": \"Red\",\n  \"capacity\": {\n    \"weight\": 50,\n    \"volume\": 0.5\n  },\n  \"documents\": {\n    \"registration\": \"base64_encoded_registration\",\n    \"insurance\": \"base64_encoded_insurance\",\n    \"license\": \"base64_encoded_license\"\n  }\n}"}
+          }
+        },
+        {
+          "name": "Update Vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/users/{{USER_ID}}/vehicles/{{VEHICLE_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "users", "{{USER_ID}}", "vehicles", "{{VEHICLE_ID}}"]},
+            "body": {"mode": "raw", "raw": "{\n  \"color\": \"Blue\",\n  \"capacity\": {\n    \"weight\": 60,\n    \"volume\": 0.6\n  }\n}"}
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -5,9 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
-	"github.com/go-redis/redis/v8"
 	"context"
+
+	"github.com/go-redis/redis/v8"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -62,6 +63,12 @@ type Config struct {
 	RedisPort     string
 	RedisPassword string
 	RedisDB       int
+
+	// Cloudinary Configuration
+	CloudinaryCloudName string
+	CloudinaryAPIKey    string
+	CloudinaryAPISecret string
+	CloudinaryFolder    string
 }
 
 var AppConfig *Config
@@ -124,6 +131,12 @@ func LoadConfig() *Config {
 		RedisPort:     getEnv("REDIS_PORT", "6379"),
 		RedisPassword: getEnv("REDIS_PASSWORD", ""),
 		RedisDB:       getEnvInt("REDIS_DB", 0),
+
+		// Cloudinary
+		CloudinaryCloudName: getEnv("CLOUDINARY_CLOUD_NAME", ""),
+		CloudinaryAPIKey:    getEnv("CLOUDINARY_API_KEY", ""),
+		CloudinaryAPISecret: getEnv("CLOUDINARY_API_SECRET", ""),
+		CloudinaryFolder:    getEnv("CLOUDINARY_FOLDER", "ilex/profiles"),
 	}
 
 	AppConfig = config

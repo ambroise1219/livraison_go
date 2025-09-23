@@ -62,7 +62,7 @@
     }
   ],
   "variable": [
-    {"key": "BASE_URL", "value": "http://localhost:8080"},
+    {"key": "BASE_URL", "value": "http://172.187.248.156:3000"},
     {"key": "ACCESS_TOKEN", "value": ""},
     {"key": "DELIVERY_ID", "value": ""}
   ]

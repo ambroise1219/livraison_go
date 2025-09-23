@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"log"
 	"math/big"
 	"time"
 
@@ -115,6 +116,11 @@ func (s *OTPService) SaveOTPWithCode(phone, code string) (*models.OTP, error) {
 		return nil, fmt.Errorf("échec de la sauvegarde de l'OTP: %v", err)
 	}
 
+	// Log OTP en non-production pour automatiser les tests
+	if s.config.Environment != "production" {
+		log.Printf("OTP DEBUG: phone=%s code=%s", normalized, code)
+	}
+
 	return otp, nil
 }
 
@@ -156,20 +162,20 @@ func (s *OTPService) VerifyOTP(phone, code string) (*models.OTP, error) {
 // getExistingOTP récupère un OTP existant pour un numéro
 func (s *OTPService) getExistingOTP(phone string) (*models.OTP, error) {
 	ctx := context.Background()
-	
+
 	otp, err := db.PrismaDB.Otp.FindFirst(
 		prismadb.Otp.Phone.Equals(phone),
 	).OrderBy(
 		prismadb.Otp.CreatedAt.Order(prismadb.SortOrderDesc),
 	).Exec(ctx)
-	
+
 	if err != nil {
 		if err == prismadb.ErrNotFound {
 			return nil, nil
 		}
 		return nil, err
 	}
-	
+
 	return &models.OTP{
 		ID:        otp.ID,
 		Phone:     otp.Phone,
@@ -182,20 +188,20 @@ func (s *OTPService) getExistingOTP(phone string) (*models.OTP, error) {
 // getOTPByPhone récupère un OTP par numéro de téléphone
 func (s *OTPService) getOTPByPhone(phone string) (*models.OTP, error) {
 	ctx := context.Background()
-	
+
 	otp, err := db.PrismaDB.Otp.FindFirst(
 		prismadb.Otp.Phone.Equals(phone),
 	).OrderBy(
 		prismadb.Otp.CreatedAt.Order(prismadb.SortOrderDesc),
 	).Exec(ctx)
-	
+
 	if err != nil {
 		if err == prismadb.ErrNotFound {
 			return nil, nil
 		}
 		return nil, err
 	}
-	
+
 	return &models.OTP{
 		ID:        otp.ID,
 		Phone:     otp.Phone,
@@ -244,27 +250,27 @@ func (s *OTPService) normalizePhoneForWhatsApp(input string) string {
 // createOTP crée un nouvel OTP en base
 func (s *OTPService) createOTP(otp *models.OTP) error {
 	ctx := context.Background()
-	
+
 	_, err := db.PrismaDB.Otp.CreateOne(
 		prismadb.Otp.Phone.Set(otp.Phone),
 		prismadb.Otp.Code.Set(otp.Code),
 		prismadb.Otp.ExpiresAt.Set(otp.ExpiresAt),
 	).Exec(ctx)
-	
+
 	return err
 }
 
 // updateOTP met à jour un OTP existant
 func (s *OTPService) updateOTP(otp *models.OTP) error {
 	ctx := context.Background()
-	
+
 	_, err := db.PrismaDB.Otp.FindUnique(
 		prismadb.Otp.ID.Equals(otp.ID),
 	).Update(
 		prismadb.Otp.Code.Set(otp.Code),
 		prismadb.Otp.ExpiresAt.Set(otp.ExpiresAt),
 	).Exec(ctx)
-	
+
 	return err
 }
 
@@ -283,7 +289,7 @@ func (s *OTPService) enforceOTPRateLimit(phone string) error {
 		prismadb.Otp.Phone.Equals(phone),
 		prismadb.Otp.CreatedAt.Gte(windowStart),
 	).Exec(ctx)
-	
+
 	if err != nil {
 		return err
 	}

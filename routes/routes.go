@@ -23,6 +23,13 @@ func SetupRoutes() *gin.Engine {
 	// Rate limiting global (100 requêtes par minute)
 	router.Use(middlewares.RateLimitMiddleware(100, time.Minute))
 
+	// Page racine simple pour vérifier le service
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "Backend en cours d'exécution",
+		})
+	})
+
 	// Health check endpoint optimisé (pas d'authentification requise)
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
@@ -135,6 +142,10 @@ func setupAuthRoutes(rg *gin.RouterGroup) {
 		// Profil utilisateur
 		auth.GET("/profile", handlers.GetProfile)
 		auth.PUT("/profile", handlers.UpdateProfile)
+
+		// Upload photo de profil (multipart/form-data, champ: file)
+		auth.POST("/profile/picture", handlers.UploadProfilePicture)
+		auth.GET("/test/cloudinary", handlers.TestCloudinaryUploader)
 	}
 }
 
@@ -337,32 +348,32 @@ func setupSupportRoutes(rg *gin.RouterGroup) {
 		{
 			// Créer un nouveau ticket (client/livreur)
 			tickets.POST("/", handlers.CreateSupportTicket)
-			
+
 			// Lister les tickets (selon permissions)
 			tickets.GET("/", handlers.GetSupportTickets)
-			
+
 			// Détails d'un ticket
 			tickets.GET("/:ticket_id", handlers.GetSupportTicketByID)
-			
+
 			// Messages d'un ticket
 			tickets.GET("/:ticket_id/messages", handlers.GetSupportMessages)
 			tickets.POST("/:ticket_id/messages", handlers.AddSupportMessage)
-			
+
 			// Historique des réassignations (staff seulement)
 			tickets.GET("/:ticket_id/history", middlewares.RequireStaff(), handlers.GetReassignmentHistory)
-			
+
 			// Routes staff seulement
 			staffRoutes := tickets.Group("/")
 			staffRoutes.Use(middlewares.RequireStaff())
 			{
 				// Mettre à jour le statut d'un ticket
 				staffRoutes.PUT("/:ticket_id/status", handlers.UpdateSupportTicketStatus)
-				
+
 				// Réassigner un ticket
 				staffRoutes.POST("/:ticket_id/reassign", handlers.ReassignSupportTicket)
 			}
 		}
-		
+
 		// Statistiques de support
 		support.GET("/stats", handlers.GetSupportStats)
 	}
@@ -376,10 +387,10 @@ func setupSupportRoutes(rg *gin.RouterGroup) {
 		{
 			// Créer un groupe
 			groups.POST("/", handlers.CreateInternalGroup)
-			
+
 			// Lister mes groupes
 			groups.GET("/", handlers.GetInternalGroups)
-			
+
 			// Messages d'un groupe
 			groups.GET("/:group_id/messages", handlers.GetGroupMessages)
 			groups.POST("/:group_id/messages", handlers.AddGroupMessage)

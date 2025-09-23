@@ -1,0 +1,150 @@
+{
+  "info": {
+    "name": "ILEX Delivery Operations",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection pour toutes les opérations de livraison"
+  },
+  "variable": [
+    {"key": "BASE_URL", "value": "http://172.187.248.156:3000"},
+    {"key": "ACCESS_TOKEN", "value": ""},
+    {"key": "DELIVERY_ID", "value": ""},
+    {"key": "DRIVER_ID", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "📦 Delivery Management",
+      "item": [
+        {
+          "name": "Create Delivery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", ""]},
+            "body": {"mode": "raw", "raw": "{\n  \"type\": \"SIMPLE\",\n  \"pickupAddress\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"Abidjan\",\n    \"postalCode\": \"00225\",\n    \"latitude\": 5.3599,\n    \"longitude\": -4.0083\n  },\n  \"deliveryAddress\": {\n    \"street\": \"456 Oak Ave\",\n    \"city\": \"Abidjan\",\n    \"postalCode\": \"00225\",\n    \"latitude\": 5.3600,\n    \"longitude\": -4.0084\n  },\n  \"package\": {\n    \"description\": \"Documents\",\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 30,\n      \"width\": 20,\n      \"height\": 5\n    }\n  },\n  \"urgency\": \"NORMAL\",\n  \"instructions\": \"Handle with care\"\n}"}
+          }
+        },
+        {
+          "name": "Get Delivery",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/{{DELIVERY_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "{{DELIVERY_ID}}"]}
+          }
+        },
+        {
+          "name": "Update Delivery Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/{{DELIVERY_ID}}/status", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "{{DELIVERY_ID}}", "status"]},
+            "body": {"mode": "raw", "raw": "{\n  \"status\": \"PICKED_UP\",\n  \"notes\": \"Package picked up successfully\"\n}"}
+          }
+        },
+        {
+          "name": "Assign Delivery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/{{DELIVERY_ID}}/assign", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "{{DELIVERY_ID}}", "assign"]},
+            "body": {"mode": "raw", "raw": "{\n  \"driverId\": \"{{DRIVER_ID}}\"\n}"}
+          }
+        },
+        {
+          "name": "Calculate Delivery Price",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/price/calculate", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "price", "calculate"]},
+            "body": {"mode": "raw", "raw": "{\n  \"pickupAddress\": {\n    \"latitude\": 5.3599,\n    \"longitude\": -4.0083\n  },\n  \"deliveryAddress\": {\n    \"latitude\": 5.3600,\n    \"longitude\": -4.0084\n  },\n  \"package\": {\n    \"weight\": 0.5,\n    \"dimensions\": {\n      \"length\": 30,\n      \"width\": 20,\n      \"height\": 5\n    }\n  },\n  \"urgency\": \"NORMAL\"\n}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚚 Driver Operations",
+      "item": [
+        {
+          "name": "Get Available Deliveries",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/driver/available", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "driver", "available"]}
+          }
+        },
+        {
+          "name": "Get Assigned Deliveries",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/driver/assigned", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "driver", "assigned"]}
+          }
+        },
+        {
+          "name": "Accept Delivery",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/driver/{{DELIVERY_ID}}/accept", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "driver", "{{DELIVERY_ID}}", "accept"]}
+          }
+        },
+        {
+          "name": "Update Driver Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/driver/{{DELIVERY_ID}}/location", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "driver", "{{DELIVERY_ID}}", "location"]},
+            "body": {"mode": "raw", "raw": "{\n  \"latitude\": 5.3599,\n  \"longitude\": -4.0083,\n  \"accuracy\": 10.5\n}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Client Operations",
+      "item": [
+        {
+          "name": "Get Client Deliveries",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/client/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "client", ""]}
+          }
+        },
+        {
+          "name": "Cancel Delivery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/client/{{DELIVERY_ID}}/cancel", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "client", "{{DELIVERY_ID}}", "cancel"]},
+            "body": {"mode": "raw", "raw": "{\n  \"reason\": \"Change of plans\"\n}"}
+          }
+        },
+        {
+          "name": "Track Delivery",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/delivery/client/{{DELIVERY_ID}}/track", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "delivery", "client", "{{DELIVERY_ID}}", "track"]}
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -43,7 +43,7 @@
     }
   ],
   "variable": [
-    {"key":"BASE_URL","value":"http://localhost:8080"},
+    {"key":"BASE_URL","value":"http://172.187.248.156:3000"},
     {"key":"DELIVERY_ID","value":""},
     {"key":"USER_ID","value":"+2250701234567"}
   ]

@@ -1,3 +1,23 @@
+// @title ILEX Backend API
+// @version 1.0
+// @description API complète pour le système de livraison ILEX
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host 127.0.0.1:3000
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
 package main
 
 import (
@@ -10,6 +30,9 @@ import (
 	"github.com/ambroise1219/livraison_go/handlers"
 	"github.com/ambroise1219/livraison_go/routes"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "github.com/ambroise1219/livraison_go/docs" // Import des docs générés
 )
 
 func main() {
@@ -44,9 +67,16 @@ func main() {
 	handlers.InitHandlers()
 	log.Println("✅ Handlers initialisés avec succès")
 
+	// Vérifier l'uploader Cloudinary
+	log.Println("🔍 Vérification de l'uploader Cloudinary...")
+	log.Println("🔍 Test d'initialisation Cloudinary...")
+
 	// Configurer les routes
 	log.Println("🚀 Configuration des routes...")
 	router := routes.SetupRoutes()
+	
+	// Ajouter la route Swagger
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Afficher les informations de démarrage
 	log.Printf("🌟 Serveur ILEX Backend démarré:")
@@ -78,7 +108,7 @@ func init() {
 		os.Setenv("ENVIRONMENT", "development")
 	}
 	if os.Getenv("DATABASE_URL") == "" {
-		os.Setenv("DATABASE_URL", "postgresql://livraison_user:livraison_pass@localhost:5432/livraison_db?sslmode=disable")
+		os.Setenv("DATABASE_URL", "postgresql://neondb_owner:npg_9pkHjaIsTc6Z@ep-purple-king-agho52sv-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
 	}
 	if os.Getenv("JWT_SECRET") == "" {
 		os.Setenv("JWT_SECRET", "dev-jwt-secret-key-change-in-production")

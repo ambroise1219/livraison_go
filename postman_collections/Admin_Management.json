@@ -1,0 +1,228 @@
+{
+  "info": {
+    "name": "ILEX Admin Management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection pour toutes les opérations administrateur"
+  },
+  "variable": [
+    {"key": "BASE_URL", "value": "http://172.187.248.156:3000"},
+    {"key": "ACCESS_TOKEN", "value": ""},
+    {"key": "USER_ID", "value": ""},
+    {"key": "DELIVERY_ID", "value": ""},
+    {"key": "DRIVER_ID", "value": ""},
+    {"key": "VEHICLE_ID", "value": ""},
+    {"key": "PROMO_ID", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "👥 User Management",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/users/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "users", ""]}
+          }
+        },
+        {
+          "name": "Get User Details",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/users/{{USER_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "users", "{{USER_ID}}"]}
+          }
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/users/{{USER_ID}}/role", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "users", "{{USER_ID}}", "role"]},
+            "body": {"mode": "raw", "raw": "{\n  \"role\": \"DRIVER\"\n}"}
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/users/{{USER_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "users", "{{USER_ID}}"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Delivery Management",
+      "item": [
+        {
+          "name": "Get All Deliveries",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/deliveries/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "deliveries", ""]}
+          }
+        },
+        {
+          "name": "Get Delivery Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/deliveries/stats", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "deliveries", "stats"]}
+          }
+        },
+        {
+          "name": "Force Assign Delivery",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/deliveries/{{DELIVERY_ID}}/assign/{{DRIVER_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "deliveries", "{{DELIVERY_ID}}", "assign", "{{DRIVER_ID}}"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚚 Driver Management",
+      "item": [
+        {
+          "name": "Get All Drivers",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/drivers/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "drivers", ""]}
+          }
+        },
+        {
+          "name": "Get Driver Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/drivers/{{DRIVER_ID}}/stats", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "drivers", "{{DRIVER_ID}}", "stats"]}
+          }
+        },
+        {
+          "name": "Update Driver Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/drivers/{{DRIVER_ID}}/status", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "drivers", "{{DRIVER_ID}}", "status"]},
+            "body": {"mode": "raw", "raw": "{\n  \"status\": \"ONLINE\"\n}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎁 Promotion Management",
+      "item": [
+        {
+          "name": "Get All Promotions",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/promotions/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "promotions", ""]}
+          }
+        },
+        {
+          "name": "Create Promotion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/promotions/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "promotions", ""]},
+            "body": {"mode": "raw", "raw": "{\n  \"code\": \"WELCOME10\",\n  \"type\": \"PERCENTAGE\",\n  \"value\": 10,\n  \"description\": \"10% off for new users\",\n  \"validFrom\": \"2024-01-01T00:00:00Z\",\n  \"validUntil\": \"2024-12-31T23:59:59Z\",\n  \"maxUses\": 1000,\n  \"minOrderAmount\": 5000\n}"}
+          }
+        },
+        {
+          "name": "Update Promotion",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/promotions/{{PROMO_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "promotions", "{{PROMO_ID}}"]},
+            "body": {"mode": "raw", "raw": "{\n  \"description\": \"Updated description\",\n  \"maxUses\": 2000\n}"}
+          }
+        },
+        {
+          "name": "Delete Promotion",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/promotions/{{PROMO_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "promotions", "{{PROMO_ID}}"]}
+          }
+        },
+        {
+          "name": "Get Promotion Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/promotions/{{PROMO_ID}}/stats", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "promotions", "{{PROMO_ID}}", "stats"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚗 Vehicle Management",
+      "item": [
+        {
+          "name": "Get All Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/vehicles/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "vehicles", ""]}
+          }
+        },
+        {
+          "name": "Verify Vehicle",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/vehicles/{{VEHICLE_ID}}/verify", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "vehicles", "{{VEHICLE_ID}}", "verify"]},
+            "body": {"mode": "raw", "raw": "{\n  \"verified\": true,\n  \"notes\": \"Vehicle documents verified\"\n}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Statistics",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/stats/dashboard", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "stats", "dashboard"]}
+          }
+        },
+        {
+          "name": "Get Revenue Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/stats/revenue", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "stats", "revenue"]}
+          }
+        },
+        {
+          "name": "Get User Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/stats/users", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "stats", "users"]}
+          }
+        }
+      ]
+    }
+  ]
+}

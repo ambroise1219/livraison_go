@@ -243,6 +243,17 @@ func (s *UserService) UpdateUser(user *models.User) error {
 	return err
 }
 
+// UpdateUserProfilePicture met à jour l'identifiant de la photo de profil
+func (s *UserService) UpdateUserProfilePicture(userID string, profilePictureID string) error {
+	ctx := context.Background()
+	_, err := db.PrismaDB.User.FindUnique(
+		prismadb.User.ID.Equals(userID),
+	).Update(
+		prismadb.User.ProfilePictureID.Set(profilePictureID),
+	).Exec(ctx)
+	return err
+}
+
 // GetAllDrivers récupère tous les livreurs avec pagination et filtre de statut
 func (s *UserService) GetAllDrivers(page int, limit int, statusFilter string) ([]*models.User, int, error) {
 	ctx := context.Background()
@@ -352,14 +363,14 @@ func (s *UserService) GetDriverStats(driverID string) (map[string]interface{}, e
 	}
 
 	stats := map[string]interface{}{
-		"totalDeliveries":    len(deliveries),
+		"totalDeliveries":     len(deliveries),
 		"completedDeliveries": completedCount,
 		"cancelledDeliveries": cancelledCount,
-		"activeDeliveries":   activeCount,
-		"averageRating":      averageRating,
-		"ratingsCount":       len(ratings),
-		"driverStatus":       string(driver.DriverStatus),
-		"isActive":           driver.DriverStatus == prismadb.DriverStatusOnline || driver.DriverStatus == prismadb.DriverStatusAvailable,
+		"activeDeliveries":    activeCount,
+		"averageRating":       averageRating,
+		"ratingsCount":        len(ratings),
+		"driverStatus":        string(driver.DriverStatus),
+		"isActive":            driver.DriverStatus == prismadb.DriverStatusOnline || driver.DriverStatus == prismadb.DriverStatusAvailable,
 	}
 
 	return stats, nil

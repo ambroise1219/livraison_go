@@ -1,0 +1,254 @@
+{
+  "info": {
+    "name": "ILEX Realtime & Support",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection pour les opérations temps réel et support"
+  },
+  "variable": [
+    {"key": "BASE_URL", "value": "http://172.187.248.156:3000"},
+    {"key": "ACCESS_TOKEN", "value": ""},
+    {"key": "DELIVERY_ID", "value": ""},
+    {"key": "DRIVER_ID", "value": ""},
+    {"key": "USER_ID", "value": ""},
+    {"key": "TICKET_ID", "value": ""},
+    {"key": "GROUP_ID", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "⚡ Realtime Operations",
+      "item": [
+        {
+          "name": "SSE - Delivery Tracking",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/sse/delivery/{{DELIVERY_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "sse", "delivery", "{{DELIVERY_ID}}"]}
+          }
+        },
+        {
+          "name": "WebSocket - Chat",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/ws/chat/{{DELIVERY_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "ws", "chat", "{{DELIVERY_ID}}"]}
+          }
+        },
+        {
+          "name": "Update Driver Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/realtime/location/{{DRIVER_ID}}/{{DELIVERY_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "realtime", "location", "{{DRIVER_ID}}", "{{DELIVERY_ID}}"]},
+            "body": {"mode": "raw", "raw": "{\n  \"latitude\": 5.3599,\n  \"longitude\": -4.0083,\n  \"accuracy\": 10.5,\n  \"timestamp\": \"2024-01-01T12:00:00Z\"\n}"}
+          }
+        },
+        {
+          "name": "Get Driver Location",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/realtime/location/{{DRIVER_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "realtime", "location", "{{DRIVER_ID}}"]}
+          }
+        },
+        {
+          "name": "Update Delivery Status (Realtime)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/realtime/delivery/{{DELIVERY_ID}}/status", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "realtime", "delivery", "{{DELIVERY_ID}}", "status"]},
+            "body": {"mode": "raw", "raw": "{\n  \"status\": \"IN_TRANSIT\",\n  \"notes\": \"Package is on the way\"\n}"}
+          }
+        },
+        {
+          "name": "Send Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/realtime/notification/{{USER_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "realtime", "notification", "{{USER_ID}}"]},
+            "body": {"mode": "raw", "raw": "{\n  \"title\": \"Delivery Update\",\n  \"message\": \"Your package is on the way\",\n  \"type\": \"DELIVERY_UPDATE\",\n  \"data\": {\n    \"deliveryId\": \"{{DELIVERY_ID}}\",\n    \"status\": \"IN_TRANSIT\"\n  }\n}"}
+          }
+        },
+        {
+          "name": "Calculate ETA",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/realtime/eta/{{DELIVERY_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "realtime", "eta", "{{DELIVERY_ID}}"]}
+          }
+        },
+        {
+          "name": "Get Realtime Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/realtime/stats", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "realtime", "stats"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎫 Support Tickets",
+      "item": [
+        {
+          "name": "Create Support Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/support/tickets/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "support", "tickets", ""]},
+            "body": {"mode": "raw", "raw": "{\n  \"subject\": \"Delivery Issue\",\n  \"description\": \"My package was not delivered on time\",\n  \"category\": \"DELIVERY\",\n  \"priority\": \"MEDIUM\"\n}"}
+          }
+        },
+        {
+          "name": "Get Support Tickets",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/support/tickets/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "support", "tickets", ""]}
+          }
+        },
+        {
+          "name": "Get Support Ticket by ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/support/tickets/{{TICKET_ID}}", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "support", "tickets", "{{TICKET_ID}}"]}
+          }
+        },
+        {
+          "name": "Update Support Ticket Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/support/tickets/{{TICKET_ID}}/status", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "support", "tickets", "{{TICKET_ID}}", "status"]},
+            "body": {"mode": "raw", "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"notes\": \"Ticket is being processed\"\n}"}
+          }
+        },
+        {
+          "name": "Add Support Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/support/tickets/{{TICKET_ID}}/messages", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "support", "tickets", "{{TICKET_ID}}", "messages"]},
+            "body": {"mode": "raw", "raw": "{\n  \"message\": \"Thank you for your help\",\n  \"isInternal\": false\n}"}
+          }
+        },
+        {
+          "name": "Get Support Messages",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/support/tickets/{{TICKET_ID}}/messages", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "support", "tickets", "{{TICKET_ID}}", "messages"]}
+          }
+        },
+        {
+          "name": "Get Reassignment History",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/support/tickets/{{TICKET_ID}}/history", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "support", "tickets", "{{TICKET_ID}}", "history"]}
+          }
+        },
+        {
+          "name": "Reassign Support Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/support/tickets/{{TICKET_ID}}/reassign", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "support", "tickets", "{{TICKET_ID}}", "reassign"]},
+            "body": {"mode": "raw", "raw": "{\n  \"assignedTo\": \"{{USER_ID}}\",\n  \"reason\": \"Specialized support needed\"\n}"}
+          }
+        },
+        {
+          "name": "Get Support Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/support/stats", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "support", "stats"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "💬 Internal Chat",
+      "item": [
+        {
+          "name": "Create Internal Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/internal/groups/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "internal", "groups", ""]},
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"Support Team\",\n  \"description\": \"Internal chat for support team\",\n  \"members\": [\"{{USER_ID}}\"]\n}"}
+          }
+        },
+        {
+          "name": "Get Internal Groups",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/internal/groups/", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "internal", "groups", ""]}
+          }
+        },
+        {
+          "name": "Get Group Messages",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"}],
+            "url": {"raw": "{{BASE_URL}}/api/v1/internal/groups/{{GROUP_ID}}/messages", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "internal", "groups", "{{GROUP_ID}}", "messages"]}
+          }
+        },
+        {
+          "name": "Add Group Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/internal/groups/{{GROUP_ID}}/messages", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "internal", "groups", "{{GROUP_ID}}", "messages"]},
+            "body": {"mode": "raw", "raw": "{\n  \"message\": \"Hello team!\"\n}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "📞 Admin Support",
+      "item": [
+        {
+          "name": "Initiate Direct Contact",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{ACCESS_TOKEN}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "url": {"raw": "{{BASE_URL}}/api/v1/admin/support/contact", "host": ["{{BASE_URL}}"], "path": ["api", "v1", "admin", "support", "contact"]},
+            "body": {"mode": "raw", "raw": "{\n  \"userId\": \"{{USER_ID}}\",\n  \"subject\": \"Direct Contact\",\n  \"message\": \"We need to discuss your account\"\n}"}
+          }
+        }
+      ]
+    }
+  ]
+}
